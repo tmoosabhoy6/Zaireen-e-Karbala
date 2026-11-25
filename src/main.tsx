@@ -69,23 +69,6 @@ function LangSwitch({ lang }: { lang: Lang }) {
   );
 }
 
-const SIZES = [0.9, 1, 1.12, 1.26];
-/** [I38] Two plain buttons make all the text smaller or larger; the choice is remembered. */
-function TextSize({ lang }: { lang: Lang }) {
-  // [I141] Icon-only controls (text size, clear search, close, copy) all carry a spoken label.
-  const [i, setI] = useState(() => { try { return Math.min(3, Math.max(0, Number(localStorage.getItem("zk.size") ?? 1))); } catch { return 1; } });
-  useEffect(() => {
-    document.documentElement.style.setProperty("--zoom", String(SIZES[i]));
-    try { localStorage.setItem("zk.size", String(i)); } catch { /* fine */ }
-  }, [i]);
-  return (
-    <div className="tsize" role="group">
-      <button type="button" disabled={i === 0} onClick={() => { haptic(); setI(i - 1); }} aria-label={tr2(lang, "smaller")}>A<small>−</small></button>
-      <button type="button" disabled={i === 3} onClick={() => { haptic(); setI(i + 1); }} aria-label={tr2(lang, "larger")}>A<small>+</small></button>
-    </div>
-  );
-}
-
 function App() {
   const path = usePath();
   const { lang, payload, stale, failed, at, loading } = useStore();
@@ -94,6 +77,8 @@ function App() {
   const me = useMe();
   const scrolled = useScrolled(700);
   useGlassFx();
+  // The text-size buttons are gone; forget any size chosen with them so nobody is left on an odd size.
+  useEffect(() => { try { localStorage.removeItem("zk.size"); } catch { /* fine */ } }, []);
   useEffect(() => {
     void loadMe();
     const again = () => document.visibilityState === "visible" && void loadMe();
@@ -192,7 +177,6 @@ function App() {
       <header className="top frost">
         <div className="top-row">
           <a className="brand" {...link("/")} aria-label={tr(lang, "appName")}><img src="/brand/karbala-mualla.svg" alt="كربلاء المعلى" width="79" height="40" /></a>
-          <TextSize lang={lang} />
           <LangSwitch lang={lang} />
         </div>
         {me && <SignedInBar me={me} lang={lang} />}

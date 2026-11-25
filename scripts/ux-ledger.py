@@ -208,12 +208,8 @@ Most-asked labels were clipped after two lines; the full label always shows
 English shown to Lisan readers was not marked as English for screen readers; it is""".split("\n")
 assert len(I) == 153 and len(F) == 53, (len(I), len(F))
 # Effects taken out again in the next pass, when the owner found the app laggy and some effects gimmicky.
-REMOVED = {9, 19, 29, 34, 35, 48, 50, 51, 52, 53, 60, 93, 96, 120, 121, 124, 125, 126, 127, 128, 130, 131, 132}
-NEW = """The arch is a dial of the day: its gold line runs from 4 am at the left foot, over the point at midday, to 10 pm at the right foot; it is lit up to the present
-The sun sits on the arch at the current time, and becomes a crescent at night
-Every namaz, meal and majlis of the day is a mark on the arch, filled once it has passed
-The arch shows the time in Karbala, for zaereen whose phones are on another time zone
-The dock carries a live line on every screen: what is happening now or what comes next, with a countdown; it leads to today's list
+REMOVED = {38, 9, 19, 29, 34, 35, 48, 50, 51, 52, 53, 60, 93, 96, 120, 121, 124, 125, 126, 127, 128, 130, 131, 132}
+NEW = """The dock carries a live line on every screen: what is happening now or what comes next, with a countdown; it leads to today's list
 The room is a key card: a number plate, a gold eyelet, a tear line and a stub with the stay dates
 "For you today": three pages chosen by where the zair is in their stay (arriving, staying, leaving)
 Maloomat puts the section for today's stage of the stay first and marks it
@@ -234,7 +230,7 @@ out = ["# UX changelog", "",
   f"## Final pass: faster, calmer, and reinvented ({len(NEW)})", ""]
 out += [f"{n}. {t}." for n, t in enumerate(NEW, 1)]
 out += ["", f"## Counted pass: improvements ({len(I)} made, {len(REMOVED)} later removed, {kept} in the app)", "",
-  "Struck-through lines were removed in the final pass because they looped, shimmered or cost speed.", ""]
+  "Struck-through lines were removed later: most because they looped, shimmered or cost speed; the A- / A+", "text-size buttons at the owner's request.", ""]
 out += [(f"{n}. ~~{t}~~ (removed)" if n in REMOVED else f"{n}. `[I{n}]` {t}.") for n, t in enumerate(I, 1)]
 out += ["", f"## Counted pass: faults removed ({len(F)})", ""]
 out += [f"{n}. `[F{n}]` {t}." for n, t in enumerate(F, 1)]

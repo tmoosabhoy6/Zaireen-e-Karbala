@@ -40,26 +40,10 @@ function archPath(w: number, h: number, inset: number, r: number): string {
   return `M${x0} ${yb - r}V${sh}C${x0} ${c1} ${w * 0.31} ${c2} ${w / 2} ${top}C${w * 0.69} ${c2} ${x1} ${c1} ${x1} ${sh}V${yb - r}Q${x1} ${yb} ${x1 - r} ${yb}H${x0 + r}Q${x0} ${yb} ${x0} ${yb - r}Z`;
 }
 
-/** The arch's inner line as an open path: from the left foot, over the point, to the right foot. */
-function dialPath(w: number, h: number, inset: number): string {
-  const x0 = inset, x1 = w - inset, yb = h - inset - 16, top = inset * 1.25, sh = CAP * 0.79 + inset * 0.3;
-  const c1 = top + (sh - top) * 0.5, c2 = top + (sh - top) * 0.36;
-  return `M${x0} ${yb}V${sh}C${x0} ${c1} ${w * 0.31} ${c2} ${w / 2} ${top}C${w * 0.69} ${c2} ${x1} ${c1} ${x1} ${sh}V${yb}`;
-}
-const DIAL_FROM = 4 * 60, DIAL_TO = 22 * 60;
-const dialAt = (m: number) => Math.min(1, Math.max(0, (m - DIAL_FROM) / (DIAL_TO - DIAL_FROM)));
-
-/**
- * The arch of the day. The four-centred arch of a shrine gateway holds the one thing that matters most
- * right now, and its gold line is a dial: it runs from 4 am at the left foot, over the point at midday,
- * to 10 pm at the right foot. The line is lit up to the present, the sun sits at "now", and each namaz,
- * meal and majlis of the day is a mark on it. It is redrawn when the minute changes; nothing loops.
- */
-export function Arch({ children, minutes, marks = [], lang }: { children: ReactNode; minutes: number; marks?: number[]; lang: Lang }) {
+/** The four-centred arch of a shrine gateway: holds the one thing that matters most right now. */
+export function Arch({ children }: { children: ReactNode }) {
   const ref = useRef<HTMLElement>(null);
-  const dial = useRef<SVGPathElement>(null);
-  const [box, setBox] = useState({ w: 358, h: 236 });
-  const [pts, setPts] = useState<{ sun: [number, number]; ticks: [number, number, boolean][] } | null>(null);
+  const [box, setBox] = useState({ w: 358, h: 220 });
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
@@ -70,35 +54,16 @@ export function Arch({ children, minutes, marks = [], lang }: { children: ReactN
     return () => ro.disconnect();
   }, []);
   const { w, h } = box;
-  const night = minutes < DIAL_FROM || minutes >= DIAL_TO;
-  const at = minutes < DIAL_FROM ? 0 : dialAt(minutes);
-  useLayoutEffect(() => {
-    const p = dial.current;
-    if (!p) return;
-    const len = p.getTotalLength();
-    const xy = (k: number): [number, number] => { const q = p.getPointAtLength(len * k); return [q.x, q.y]; };
-    setPts({ sun: xy(at), ticks: marks.filter((m) => m >= DIAL_FROM && m <= DIAL_TO).map((m) => [...xy(dialAt(m)), m <= minutes] as [number, number, boolean]) });
-  }, [w, h, at, minutes, marks.join()]);
-  const outer = archPath(w, h, 0, 26);
-  const line = dialPath(w, h, 8);
   return (
     <section className="arch" ref={ref}>
       <svg className="arch-svg" viewBox={`0 0 ${w} ${h}`} width={w} height={h} aria-hidden="true">
         <defs>
           <linearGradient id="arch-grad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#96321f" /><stop offset="0.45" stopColor="#74200f" /><stop offset="1" stopColor="#56130a" /></linearGradient>
         </defs>
-        <path d={outer} fill="url(#arch-grad)" />
-        <path ref={dial} className="dial-track" d={line} />
-        <path className="dial-done" d={line} pathLength={100} strokeDasharray={`${(at * 100).toFixed(2)} 100`} />
-        {pts?.ticks.map(([x, y, past], i) => <circle key={i} className={past ? "dial-tick past" : "dial-tick"} cx={x} cy={y} r={3.4} />)}
-        {pts && (night
-          ? <g className="dial-moon"><circle cx={pts.sun[0]} cy={pts.sun[1]} r={8} /><circle className="cut" cx={pts.sun[0] + 3.5} cy={pts.sun[1] - 2.5} r={6.5} /></g>
-          : <g className="dial-sun"><circle className="halo" cx={pts.sun[0]} cy={pts.sun[1]} r={13} /><circle cx={pts.sun[0]} cy={pts.sun[1]} r={7} /></g>)}
+        <path d={archPath(w, h, 0, 26)} fill="url(#arch-grad)" />
+        <path className="arch-line" d={archPath(w, h, 7, 20)} />
       </svg>
-      <div className="arch-in">
-        <p className="arch-clock">{night ? <Moon size={15} aria-hidden="true" /> : <Sun size={15} aria-hidden="true" />}<bdi dir="ltr">{fmt(minutes)}</bdi><span>{tr2(lang, "karbala")}</span></p>
-        {children}
-      </div>
+      <div className="arch-in">{children}</div>
     </section>
   );
 }
@@ -321,7 +286,7 @@ export function Aaj({ ctx, arch, room, at, loading, stage }: { ctx: Ctx; arch: R
   const Chevron = lang === "lud" ? ChevronLeft : ChevronRight;
   return (
     <div className="aaj">
-      <Arch minutes={ctx.minutes} lang={lang} marks={dayRows(ctx).map((r) => r.at).filter((n): n is number => n !== null)}>{arch}</Arch>
+      <Arch>{arch}</Arch>
       <div className="cols">
         <div className="col">
           {room}
@@ -432,6 +397,7 @@ export function Maloomat({ ctx, stage }: { ctx: Ctx; stage: Stage | null }) {
       <form className="search pane" role="search" onSubmit={(e) => { e.preventDefault(); input.current?.blur(); /* [I97] */ }}>
         <Search size={20} aria-hidden="true" /> 
         <input ref={input} type="search" enterKeyHint="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder={tr2(lang, "searchInfo")} aria-label={tr2(lang, "searchInfo")} />
+        {/* [I141] Icon-only controls (clear search, close, copy) all carry a spoken label. */}
         {q && <button type="button" className="search-x" onClick={() => { setQ(""); input.current?.focus(); }} aria-label={tr2(lang, "clear")}><X size={18} aria-hidden="true" /></button>} {/* [I89] */}
       </form>
       {needle ? (

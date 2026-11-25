@@ -93,3 +93,7 @@ Ideas only: every effect is written for this app in plain CSS and a few lines of
 - **Stage of stay.** From the stay dates the app knows whether the zair is arriving, staying or leaving. Aaj shows three pages "For you today" and Maloomat puts that stage's section first. Signed-out visitors see the normal order.
 - **The schedule is a route**: a dashed line with date stations, filled once passed, the next ringed in gold.
 - `UX-CHANGELOG.md` now marks the 23 earlier effects that were removed, and lists this pass.
+
+## Removed at the owner's request after the final pass
+- **The arch as a dial of the day** (lit line, sun and crescent, marks, Karbala clock). The arch is a still gold outline again.
+- **The A- / A+ text-size buttons** in the top bar. Text follows the phone's own size setting; any size chosen with the buttons is forgotten.

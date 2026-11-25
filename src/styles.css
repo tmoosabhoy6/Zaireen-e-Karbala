@@ -55,8 +55,7 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 a, button, input, label, summary { touch-action: manipulation; } /* [I151] */
 h1, h2, h3, h4 { text-wrap: balance; } p, li { text-wrap: pretty; overflow-wrap: anywhere; } /* [I144] [I146] */
 .body p, .lead, .note-line { max-width: 62ch; } /* [I145] */
-.num, .dayline-value, .hours, .count, .wifi-code, .zday-time, .menu-time, time, .arch-clock { font-variant-numeric: lining-nums tabular-nums; } /* [I143] */
-.num { white-space: nowrap; }
+.num, .dayline-value, .hours, .count, .wifi-code, .zday-time, .menu-time, time, .num { white-space: nowrap; }
 :focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; box-shadow: 0 0 0 6px rgb(255 255 255 / 0.9); border-radius: inherit; } /* [I56] */
 [data-fallback] { font-family: "Readex Pro Variable", system-ui, sans-serif; line-height: 1.5; text-align: left; }
 .pre { white-space: pre-line; }
@@ -72,7 +71,6 @@ h1, h2, h3, h4 { text-wrap: balance; } p, li { text-wrap: pretty; overflow-wrap:
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='56' viewBox='0 0 56 56'%3E%3Cg fill='none' stroke='%23c96a5c' stroke-opacity='.09' stroke-width='1'%3E%3Crect x='16' y='16' width='24' height='24'/%3E%3Crect x='16' y='16' width='24' height='24' transform='rotate(45 28 28)'/%3E%3Cpath d='M0 28h11M45 28h11M28 0v11M28 45v11'/%3E%3C/g%3E%3C/svg%3E"); }
 .ambient i { display: none; }
 .app { max-width: 540px; margin: 0 auto; min-height: 100dvh; padding: 0 max(var(--gutter), env(safe-area-inset-left)) calc(var(--dock-h) + 44px + env(safe-area-inset-bottom)) max(var(--gutter), env(safe-area-inset-right)); } /* [I150] [F9] */
-main { zoom: var(--zoom, 1); }
 /* [F24] Entrances are brief: a screen fades in over 0.18s and nothing is staggered or delayed. */
 .view { animation: view-in 0.18s ease-out both; } @keyframes view-in { from { opacity: 0; } }
 .pane, .block { background: var(--card); border: 1px solid var(--edge); border-radius: var(--r-md); box-shadow: var(--shadow); position: relative; }
@@ -88,10 +86,7 @@ main { zoom: var(--zoom, 1); }
 /* ---- Top bar: solid, no blur ---- */
 .top { position: sticky; top: 0; z-index: 30; margin: 0 calc(var(--gutter) * -1); padding: calc(8px + env(safe-area-inset-top)) var(--gutter) 8px; display: grid; border-width: 0 0 1px; border-radius: 0 0 22px 22px; }
 .top-row { display: flex; align-items: center; gap: 8px; }
-.brand { height: 44px; display: grid; align-items: center; flex: none; } .brand img { height: 40px; width: auto; }
-.tsize { display: flex; gap: 4px; margin-inline-start: auto; }
-.tsize button { width: 44px; height: 44px; border-radius: 14px; font-weight: 600; font-size: 17px; color: var(--maroon-deep); background: rgb(122 31 20 / 0.07); display: grid; grid-auto-flow: column; place-content: center; }
-.tsize button small { font-size: 13px; } .tsize button:first-child { font-size: 14px; } .tsize button:active { transform: scale(0.92); } .tsize button[disabled] { opacity: 0.35; }
+.brand { height: 44px; display: grid; align-items: center; flex: none; margin-inline-end: auto; } .brand img { height: 40px; width: auto; }
 .seg { position: relative; display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; padding: 3px; border-radius: 999px; background: rgb(122 31 20 / 0.08); }
 .seg::before { content: ""; position: absolute; top: 3px; bottom: 3px; inset-inline-start: calc(3px + var(--i, 0) * (100% - 6px) / 2); width: calc((100% - 6px) / 2); border-radius: 999px; background: #fff; box-shadow: 0 1px 2px rgb(90 20 11 / 0.2); transition: inset-inline-start 0.25s var(--ease); }
 .seg button { position: relative; min-height: 44px; padding: 2px 11px; font-size: 14.5px; font-weight: 500; color: var(--ink-2); text-align: center; white-space: nowrap; } /* [F19] */
@@ -130,16 +125,11 @@ html[data-lang="lud"] .dock-tabs a { font-size: 14.5px; line-height: 1.4; }
 .toast-bar { position: absolute; left: 0; bottom: 0; height: 3px; width: 100%; background: var(--gold); transform-origin: left; animation: toast-bar 2.8s linear forwards; } /* [I136] */
 @keyframes toast-in { from { translate: 0 16px; opacity: 0; } } @keyframes toast-bar { to { transform: scaleX(0); } }
 
-/* ---- The arch of the day: its gold line is a dial from 4 am to 10 pm, the sun marks now ---- */
+/* ---- The arch: the one thing that matters most right now, inside a still gold outline ---- */
 .arch { position: relative; margin-top: 10px; color: var(--cream); filter: drop-shadow(0 12px 14px rgb(90 20 11 / 0.22)); }
 .arch-svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
-.dial-track { fill: none; stroke: rgb(236 215 166 / 0.3); stroke-width: 2; stroke-linecap: round; }
-.dial-done { fill: none; stroke: #f3d795; stroke-width: 3; stroke-linecap: round; }
-.dial-tick { fill: #6d1c10; stroke: rgb(236 215 166 / 0.75); stroke-width: 1.4; } .dial-tick.past { fill: #f3d795; stroke: #f3d795; }
-.dial-sun circle { fill: #ffe9b5; } .dial-sun .halo { fill: rgb(255 226 150 / 0.28); }
-.dial-moon circle { fill: #fdf2dc; } .dial-moon .cut { fill: #86291a; }
+.arch-line { fill: none; stroke: rgb(236 215 166 / 0.75); stroke-width: 1.1; }
 .arch-in { position: relative; padding: 34px 26px 22px; text-align: center; }
-.arch-clock { display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 13.5px; color: var(--gold-soft); margin-bottom: 6px; } .arch-clock span { opacity: 0.8; }
 .arch-swap { animation: view-in 0.25s ease-out both; }
 .arch-kicker { font-size: 15.5px; color: var(--gold-soft); display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; } /* [F35] */
 .arch-kicker::before, .arch-kicker::after { content: ""; width: 6px; height: 6px; background: var(--gold-soft); rotate: 45deg; border-radius: 1px; opacity: 0.85; }
