@@ -55,3 +55,13 @@ Small decisions made while building, newest last. Anything hard to undo was aske
 - Every animation is switched off for people who ask their phone to reduce motion.
 - The language choice is a two-part switch in the top bar; "Not you? Sign out" stays one tap away under it.
 - Admin keeps its plain style (`src/admin.css`).
+
+## Visual techniques taken from open design repositories (owner's request)
+Ideas only: every effect is written for this app in plain CSS and a few lines of TypeScript. No code was copied and no animation library was added, so the app stays light on weak connections.
+- **Rim light and reactive highlight** (after the liquid-glass projects, e.g. rdev/liquid-glass-react and the LogRocket write-up on refraction and rim specular): every pane has a bright edge that turns as the phone tilts, and the sheen on a tile sits where the finger is. True refraction (SVG displacement) is left out: those projects say it does not show in Safari or Firefox.
+- **Border beam** (after Magic UI and Jakub Antalik's border-beam): a thread of gold light travels the arch's inner line; a beam circles the next ziyarat and the sign-in tile.
+- **Spotlight card** (after React Bits): the highlight follows the touch.
+- **Native-feeling sheets** (after Vaul and Emil Kowalski's notes): drag down by the grip or header to dismiss, resistance when pulled up, the iOS sheet curve, and the screen behind steps back while a sheet is open.
+- **Bento stagger and spring motion** (after the glass dashboard templates built with Framer Motion): tiles rise in one after another; spring curves are done with CSS `linear()`.
+- Also: a live countdown to the next namaz or meal, the tapped tile's icon morphing into the page title, a moving sheen on the dock's lens, fine grain over the background, and scroll-linked depth on the top bar and arch.
+- Tilt uses the phone's orientation only where the browser gives it without a permission prompt (Android). iPhones would need to ask the zair, so it is skipped there.

@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import {
   Accessibility, Banknote, BedDouble, BookOpen, Building2, Bus, Car, Check, ChevronLeft, ChevronRight, Clock, Copy, HandHeart,
@@ -82,6 +82,7 @@ export function CopyButton({ value, lang, label }: { value: string; lang: Lang; 
       onClick={async () => {
         try {
           await navigator.clipboard.writeText(value);
+          navigator.vibrate?.(10);
           setDone(true);
           setTimeout(() => setDone(false), 2000);
         } catch { /* clipboard blocked: the value is on screen to type */ }
@@ -182,25 +183,73 @@ export function MenuCard({ ctx }: { ctx: Ctx }) {
   );
 }
 
-/** A pane that rises over the dashboard with the details behind a tile. */
+/**
+ * A pane that rises over the dashboard with the details behind a tile.
+ * Behaves like a native sheet: drag it down by its grip or header to dismiss (it resists when pulled
+ * up), it leaves with the same motion it arrived with, and the screen behind steps back while it is open.
+ */
 export function Sheet({ title, onClose, lang, children }: { title: string; onClose: () => void; lang: Lang; children: ReactNode }) {
+  const panel = useRef<HTMLDivElement>(null);
+  const drag = useRef<{ y: number; t: number; dy: number } | null>(null);
+  const [closing, setClosing] = useState(false);
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setClosing(true);
     document.addEventListener("keydown", onKey);
     document.body.style.overflow = "hidden";
+    document.documentElement.dataset.sheet = "open";
     return () => {
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = "";
+      delete document.documentElement.dataset.sheet;
     };
-  }, [onClose]);
+  }, []);
+  useEffect(() => {
+    if (closing) delete document.documentElement.dataset.sheet;
+  }, [closing]);
+  const move = (dy: number) => {
+    const el = panel.current;
+    if (!el) return;
+    el.style.transition = "none";
+    el.style.transform = `translateY(${dy}px)`;
+    el.style.setProperty("--from", `${dy}px`);
+  };
+  const handle = {
+    onPointerDown: (e: React.PointerEvent) => {
+      drag.current = { y: e.clientY, t: e.timeStamp, dy: 0 };
+      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    },
+    onPointerMove: (e: React.PointerEvent) => {
+      const d = drag.current;
+      if (!d) return;
+      const raw = e.clientY - d.y;
+      d.dy = raw < 0 ? -Math.sqrt(-raw) * 2.2 : raw; // the more it is pulled up, the less it moves
+      move(d.dy);
+    },
+    onPointerUp: (e: React.PointerEvent) => {
+      const d = drag.current;
+      drag.current = null;
+      const el = panel.current;
+      if (!d || !el) return;
+      const speed = d.dy / Math.max(1, e.timeStamp - d.t);
+      el.style.transition = "";
+      if (d.dy > 110 || (speed > 0.45 && d.dy > 24)) setClosing(true);
+      else el.style.transform = "";
+    },
+    onPointerCancel: () => {
+      drag.current = null;
+      if (panel.current) { panel.current.style.transition = ""; panel.current.style.transform = ""; }
+    },
+  };
   return createPortal(
-    <div className="sheet-wrap" role="dialog" aria-modal="true" aria-label={title}>
-      <div className="sheet-back" onClick={onClose} />
-      <div className="sheet frost">
-        <div className="sheet-grip" aria-hidden="true" />
-        <div className="sheet-head">
-          <h2>{title}</h2>
-          <button type="button" className="sheet-close" onClick={onClose} aria-label={tr(lang, "close")}><X size={22} aria-hidden="true" /></button>
+    <div className={`sheet-wrap${closing ? " closing" : ""}`} role="dialog" aria-modal="true" aria-label={title}>
+      <div className="sheet-back" onClick={() => setClosing(true)} />
+      <div className="sheet frost" ref={panel} onAnimationEnd={(e) => { if (closing && e.animationName === "sheet-down") onClose(); }}>
+        <div className="sheet-drag" {...handle}>
+          <div className="sheet-grip" aria-hidden="true" />
+          <div className="sheet-head">
+            <h2>{title}</h2>
+            <button type="button" className="sheet-close" onPointerDown={(e) => e.stopPropagation()} onClick={() => setClosing(true)} aria-label={tr(lang, "close")}><X size={22} aria-hidden="true" /></button>
+          </div>
         </div>
         {children}
       </div>

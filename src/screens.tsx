@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { BedDouble, BookOpen, ChevronLeft, ChevronRight, Clock, Megaphone, MessageCircle, Search, Utensils } from "lucide-react";
 import { karbalaNow, parseClock, parseRange } from "../shared/time";
 import { PLACES, majlisDefault, type Assembly, type PlaceId } from "../shared/ziyarat";
@@ -28,16 +28,48 @@ export function assemblyTime(payload: Payload, a: Assembly, lang: Lang): string 
   return a.time ?? (loc(byId(payload, "fact.time.aftermaghrib"), "value", lang) || "Straight after Maghrib Isha ni namaz");
 }
 
-/** The four-centred arch of a shrine gateway: holds the one thing that matters most right now. */
+const CAP = 44;
+/** One outline for the whole arch: straight sides, the four-centred shrine arch on top, soft corners below. */
+function archPath(w: number, h: number, inset: number, r: number): string {
+  const x0 = inset, x1 = w - inset, yb = h - inset, top = inset * 1.25, sh = CAP * 0.79 + inset * 0.3;
+  const c1 = top + (sh - top) * 0.5, c2 = top + (sh - top) * 0.36;
+  return `M${x0} ${yb - r}V${sh}C${x0} ${c1} ${w * 0.31} ${c2} ${w / 2} ${top}C${w * 0.69} ${c2} ${x1} ${c1} ${x1} ${sh}V${yb - r}Q${x1} ${yb} ${x1 - r} ${yb}H${x0 + r}Q${x0} ${yb} ${x0} ${yb - r}Z`;
+}
+
+/**
+ * The four-centred arch of a shrine gateway: holds the one thing that matters most right now.
+ * A thread of gold light travels round its inner line.
+ */
 export function Arch({ children }: { children: ReactNode }) {
+  const ref = useRef<HTMLElement>(null);
+  const [box, setBox] = useState({ w: 358, h: 210 });
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const measure = () => setBox({ w: Math.round(el.clientWidth), h: Math.round(el.clientHeight) });
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const { w, h } = box;
+  const outer = archPath(w, h, 0, 26);
+  const inner = archPath(w, h, 7, 20);
   return (
-    <section className="arch">
-      <svg className="arch-cap" viewBox="0 0 200 56" preserveAspectRatio="none" aria-hidden="true">
-        <defs><linearGradient id="arch-grad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#93301f" /><stop offset="1" stopColor="#7c2015" /></linearGradient></defs>
-        <path className="arch-fill" d="M0 56 V44 C0 22 62 16 100 0 C138 16 200 22 200 44 V56 Z" />
-        <path className="arch-line" d="M7 56 V46 C7 28 64 23 100 8 C136 23 193 28 193 46 V56" />
+    <section className="arch" ref={ref}>
+      <svg className="arch-svg" viewBox={`0 0 ${w} ${h}`} width={w} height={h} aria-hidden="true">
+        <defs>
+          <linearGradient id="arch-grad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#96321f" /><stop offset="0.45" stopColor="#74200f" /><stop offset="1" stopColor="#56130a" /></linearGradient>
+          <radialGradient id="arch-glow" cx="0.5" cy="0" r="0.9"><stop offset="0" stopColor="#ffd9a8" stopOpacity="0.28" /><stop offset="0.6" stopColor="#ffd9a8" stopOpacity="0" /></radialGradient>
+          <clipPath id="arch-clip"><path d={outer} /></clipPath>
+        </defs>
+        <path d={outer} fill="url(#arch-grad)" />
+        <path d={outer} fill="url(#arch-glow)" />
+        <g clipPath="url(#arch-clip)"><rect className="arch-shine" x={-w * 0.5} y={-h * 0.2} width={w * 0.45} height={h * 1.4} /></g>
+        <path className="arch-line" d={inner} />
+        <path className="arch-beam" d={inner} pathLength={100} />
       </svg>
-      <div className="arch-body">{children}</div>
+      <div className="arch-in">{children}</div>
     </section>
   );
 }
@@ -114,10 +146,13 @@ function NowTile({ ctx }: { ctx: Ctx }) {
   const main = current ?? next;
   const after = current ? next : then;
   const worded = !!main && !/\d/.test(main.value);
+  // Time until the next event; tomorrow's first event counts across midnight.
+  const wait = !current && main && main.at !== null ? (main.at > minutes ? main.at - minutes : main.at + 1440 - minutes) : null;
+  const waitText = wait === null ? "" : wait >= 60 ? `${Math.floor(wait / 60)}h ${wait % 60}m` : `${wait}m`;
   return (
     <>
       <button type="button" className="tile pane" onClick={() => setOpen(true)}>
-        <span className="tile-label">{current ? <i className="live" aria-hidden="true" /> : <Clock size={16} aria-hidden="true" />}{tr(lang, current ? "now" : "next")}</span>
+        <span className="tile-label">{current ? <i className="live" aria-hidden="true" /> : <Clock size={16} aria-hidden="true" />}{tr(lang, current ? "now" : "next")}{waitText && <bdi className="count" dir="ltr">{waitText}</bdi>}</span>
         {main ? (
           <span {...(main.fallback ? { dir: "ltr", "data-fallback": "" } : {})} style={{ display: "grid", gap: 2 }}>
             <span className="tile-title">{main.label}</span>
@@ -302,7 +337,13 @@ const SECTIONS: [string, Key][] = [["stay", "secStay"], ["ziyarat", "secZiyarat"
 
 function PageTile({ item, lang, i }: { item: Item; lang: Lang; i: number }) {
   return (
-    <a className="ptile pane" style={{ ["--i" as string]: i }} {...link(`/p/${item.id.replace(/^page\./, "")}`)}>
+    <a className="ptile pane" style={{ ["--i" as string]: i }} href={`/p/${item.id.replace(/^page\./, "")}`}
+      onClick={(e) => {
+        e.preventDefault();
+        const ic = e.currentTarget.querySelector<HTMLElement>(".ptile-ic");
+        if (ic) ic.style.viewTransitionName = "page-ic";
+        go(`/p/${item.id.replace(/^page\./, "")}`);
+      }}>
       <span className="ptile-ic"><Icon name={item.icon} /></span>
       <T item={item} field="title" lang={lang} />
     </a>
@@ -346,7 +387,7 @@ export function PageView({ id, ctx, wifi }: { id: string; ctx: Ctx; wifi?: React
       <button type="button" className="back pane" onClick={() => back("/maloomat")}><Chevron size={20} aria-hidden="true" /><span>{tr(lang, "back")}</span></button>
       {page ? (
         <>
-          <h1 className="page-title"><Icon name={page.icon} size={28} /><T item={page} field="title" lang={lang} /></h1>
+          <h1 className="page-title"><span className="page-ic"><Icon name={page.icon} size={26} /></span><T item={page} field="title" lang={lang} /></h1>
           <div className="page-body"><Blocks pageId={page.id} ctx={ctx} wifi={wifi} /></div>
         </>
       ) : <p className="soon">{tr(lang, "soon")}</p>}

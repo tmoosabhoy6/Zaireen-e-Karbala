@@ -32,6 +32,43 @@ function LangSwitch({ lang }: { lang: Lang }) {
   );
 }
 
+/**
+ * Makes the glass react: the highlight on a pane follows the finger, and (on phones that report it
+ * without asking permission) the rim light and the light behind shift as the phone is tilted.
+ */
+function useGlassLight() {
+  useEffect(() => {
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const onPointer = (e: PointerEvent) => {
+      const el = (e.target as Element | null)?.closest?.<HTMLElement>(".pane");
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      el.style.setProperty("--mx", `${Math.round(e.clientX - r.left)}px`);
+      el.style.setProperty("--my", `${Math.round(e.clientY - r.top)}px`);
+    };
+    document.addEventListener("pointerdown", onPointer, { passive: true });
+    document.addEventListener("pointermove", onPointer, { passive: true });
+    let frame = 0;
+    const onTilt = (e: DeviceOrientationEvent) => {
+      if (frame || e.gamma === null || e.beta === null) return;
+      const tx = Math.max(-1, Math.min(1, e.gamma / 35)), ty = Math.max(-1, Math.min(1, (e.beta - 40) / 35));
+      frame = requestAnimationFrame(() => {
+        frame = 0;
+        document.documentElement.style.setProperty("--tx", tx.toFixed(3));
+        document.documentElement.style.setProperty("--ty", ty.toFixed(3));
+      });
+    };
+    // iOS asks the person for permission first; the app does not interrupt them for a visual touch.
+    const free = typeof DeviceOrientationEvent !== "undefined" && typeof (DeviceOrientationEvent as unknown as { requestPermission?: unknown }).requestPermission !== "function";
+    if (free) window.addEventListener("deviceorientation", onTilt, { passive: true });
+    return () => {
+      document.removeEventListener("pointerdown", onPointer);
+      document.removeEventListener("pointermove", onPointer);
+      if (free) window.removeEventListener("deviceorientation", onTilt);
+    };
+  }, []);
+}
+
 function App() {
   const path = usePath();
   const { lang, payload, stale, failed } = useStore();
@@ -44,6 +81,8 @@ function App() {
     document.addEventListener("visibilitychange", again);
     return () => document.removeEventListener("visibilitychange", again);
   }, []);
+
+  useGlassLight();
 
   if (path.startsWith(ADMIN_PATH)) return <Suspense fallback={null}><Admin /></Suspense>;
 
@@ -119,7 +158,7 @@ function App() {
       </main>
       <nav className="dock frost" aria-label="Main">
         {TABS.map(({ path: p, key, icon: I }) => (
-          <a key={p} {...link(p)} aria-current={tab === p ? "page" : undefined}>
+          <a key={p} href={p} aria-current={tab === p ? "page" : undefined} onClick={(e) => { e.preventDefault(); if (tab !== p) navigator.vibrate?.(6); go(p); }}>
             {tab === p && <span className="dock-lens" aria-hidden="true" />}
             <I size={23} strokeWidth={1.8} aria-hidden="true" />
             <span>{tr(lang, key)}</span>
