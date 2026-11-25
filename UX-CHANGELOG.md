@@ -1,37 +1,54 @@
-# UX changelog: counted pass
+# UX changelog
 
-153 design and animation improvements and 53 faults removed, in one pass. Each line has a code; the same code
-is written in the source at the place that implements it, and `node scripts/ux-ledger-check.mjs` fails if any
-code is missing. So the count is checkable, not a claim.
+Each line has a code; the same code is written in the source at the place that implements it, and
+`node scripts/ux-ledger-check.mjs` fails if a code that should be there is missing. So the counts are checkable.
 
 Patterns named "as in ..." are ones found in public component libraries (Magic UI, React Bits, Vaul, Sonner,
-Radix, Material, NProgress). Each is written fresh for this app in plain CSS and a little TypeScript; no code
-was copied and no library was added. Lines without a name are ordinary good practice, not a library pattern.
+Radix, Material, NProgress). Each is written fresh for this app; no code was copied and no library was added.
+Lines without a name are ordinary good practice, not a library pattern.
 
-Guiding rule for this pass (owner's instruction): **nothing is hidden**. Information is shown in full; anything
-that opens or moves has a visible label, chevron or button.
+Two rules from the owner govern everything here: **nothing is hidden**, and **nothing loops or lags**.
 
-## Improvements (153)
+## Final pass: faster, calmer, and reinvented (14)
+
+1. The arch is a dial of the day: its gold line runs from 4 am at the left foot, over the point at midday, to 10 pm at the right foot; it is lit up to the present.
+2. The sun sits on the arch at the current time, and becomes a crescent at night.
+3. Every namaz, meal and majlis of the day is a mark on the arch, filled once it has passed.
+4. The arch shows the time in Karbala, for zaereen whose phones are on another time zone.
+5. The dock carries a live line on every screen: what is happening now or what comes next, with a countdown; it leads to today's list.
+6. The room is a key card: a number plate, a gold eyelet, a tear line and a stub with the stay dates.
+7. "For you today": three pages chosen by where the zair is in their stay (arriving, staying, leaving).
+8. Maloomat puts the section for today's stage of the stay first and marks it.
+9. The ziyarat schedule reads as a route: a dashed line with date stations, filled once passed, the next one ringed in gold.
+10. Nothing loops any more: motion only answers a touch or marks a screen arriving.
+11. Live blur is used on the dock alone; the top bar, cards and toasts are still glass by colour only.
+12. No whole-page snapshots when opening a page; no scroll-linked effects; no tilt or finger-tracking light.
+13. Cards no longer fade in on scroll, so nothing looks washed out between sections.
+14. The stylesheet was rebuilt from scratch at about half its size.
+
+## Counted pass: improvements (153 made, 23 later removed, 130 in the app)
+
+Struck-through lines were removed in the final pass because they looped, shimmered or cost speed.
 
 1. `[I1]` Today's line fills with colour as the day goes on.
-2. `[I2]` The marker of the current or next event pulses gold.
+2. `[I2]` The marker of the current or next event is ringed in gold.
 3. `[I3]` Every event of the day has its own icon (sunrise, sun, moon, cup, cutlery, book).
 4. `[I4]` The event happening now is lifted onto its own glass card.
 5. `[I5]` A bar shows how far through the current namaz or meal window it is.
 6. `[I6]` A countdown shows how long the current window still runs.
 7. `[I7]` A countdown shows how long until the next event.
 8. `[I8]` Finished events get a check mark that draws itself.
-9. `[I9]` The day's events rise in one after another on first view (animated list, as in Magic UI).
+9. ~~The day's events rise in one after another on first view (animated list, as in Magic UI)~~ (removed)
 10. `[I10]` Times are set in aligned (tabular) numerals.
 11. `[I11]` The date line carries a calendar icon and the Hijri date from the menu.
-12. `[I12]` Tonight's majlis is a gold row with a moving sheen and its booklet button.
+12. `[I12]` Tonight's majlis is a gold row with its booklet button.
 13. `[I13]` The room number counts up when it appears (number ticker, as in Magic UI).
 14. `[I14]` How to get in shows a key for Qasr and an open door for walk-in buildings.
 15. `[I15]` The stay is drawn as a bar from arrival to departure with today marked.
 16. `[I16]` A labelled button leads to "If your room is not ready".
 17. `[I17]` Room not assigned, not available and not-in-Faiz each have their own icon and tint.
 18. `[I18]` The meal being served now is highlighted and marked "Now".
-19. `[I19]` Menu items appear one after another.
+19. ~~Menu items appear one after another~~ (removed)
 20. `[I20]` Lunch and dinner headings carry sun and moon icons.
 21. `[I21]` The menu card button shows a thumbnail of the card.
 22. `[I22]` Each meal shows its serving time under its name.
@@ -41,13 +58,13 @@ that opens or moves has a visible label, chevron or button.
 26. `[I26]` Older announcements open in place with a labelled button whose chevron turns.
 27. `[I27]` Announcement pictures have a labelled "Open full screen" button.
 28. `[I28]` Announcement times say Today or Yesterday.
-29. `[I29]` The arch title comes into focus from a blur (blur-in text, as in Magic UI).
+29. ~~The arch title comes into focus from a blur (blur-in text, as in Magic UI)~~ (removed)
 30. `[I30]` Small gold diamonds flank the arch's top line.
 31. `[I31]` The day of the next ziyarat (Today, Tomorrow) sits in its own chip.
 32. `[I32]` The arch's map button carries a pin and an "opens outside" mark.
 33. `[I33]` The arch's contents cross-fade when the next thing changes.
-34. `[I34]` A soft gold glow breathes under the arch's point.
-35. `[I35]` Most-asked icons bounce in one after another.
+34. ~~A soft gold glow breathes under the arch's point~~ (removed)
+35. ~~Most-asked icons bounce in one after another~~ (removed)
 36. `[I36]` Most-asked tiles carry a chevron and sit under a heading.
 37. `[I37]` A ripple spreads from the finger on buttons and tiles (ripple, as in Material and Magic UI).
 38. `[I38]` A- / A+ buttons in the top bar make all text and controls smaller or larger, remembered.
@@ -60,19 +77,19 @@ that opens or moves has a visible label, chevron or button.
 45. `[I45]` A labelled "Top" button appears on long pages.
 46. `[I46]` An "Add this app to your home screen" card where the phone allows it.
 47. `[I47]` A "Skip to content" link for keyboard and screen-reader users.
-48. `[I48]` The calligraphy in the top bar eases smaller as the page scrolls (scroll-linked).
+48. ~~The calligraphy in the top bar eases smaller as the page scrolls (scroll-linked)~~ (removed)
 49. `[I49]` A gold reading-progress line on info pages (scroll progress, as in Magic UI).
-50. `[I50]` The chosen dock icon draws its own outline.
-51. `[I51]` Content dissolves softly under the dock instead of being cut by it.
-52. `[I52]` The language switch's thumb has a glass sheen.
-53. `[I53]` The light behind the glass follows Karbala's time of day (dawn, day, dusk, night).
+50. ~~The chosen dock icon draws its own outline~~ (removed)
+51. ~~Content dissolves softly under the dock instead of being cut by it~~ (removed)
+52. ~~The language switch's thumb has a glass sheen~~ (removed)
+53. ~~The light behind the glass follows Karbala's time of day (dawn, day, dusk, night)~~ (removed)
 54. `[I54]` A short haptic tick on switches, chips and buttons (Android).
 55. `[I55]` A higher-contrast look when the phone asks for more contrast.
 56. `[I56]` Focus rings follow each control's shape with a gold and white double ring.
 57. `[I57]` Selected text is tinted in the app's gold.
 58. `[I58]` Thin themed scrollbars.
 59. `[I59]` Smooth scrolling to places on the page.
-60. `[I60]` Long pages skip drawing cards that are off screen, so scrolling stays smooth.
+60. ~~Long pages skip drawing cards that are off screen, so scrolling stays smooth~~ (removed)
 61. `[I61]` Sign-in shows its two steps and ticks each as it is completed (stepper, as in Material).
 62. `[I62]` A check appears as soon as the tour ID looks right.
 63. `[I63]` A check appears at eight ITS digits, with a "5/8" counter before that.
@@ -95,7 +112,7 @@ that opens or moves has a visible label, chevron or button.
 80. `[I80]` A ziyarat that is today but not next is marked "Today".
 81. `[I81]` An empty schedule shows a calendar icon and a sentence.
 82. `[I82]` Signed out, Ziyarat shows a lock, the reason, and one Sign in button.
-83. `[I83]` The lost-person card's alert icon pulses.
+83. `[I83]` The lost-person card carries an alert icon in a disc.
 84. `[I84]` Contacts have round icons for phone and WhatsApp.
 85. `[I85]` Call and WhatsApp buttons are colour-coded.
 86. `[I86]` Contacts with no number yet are dimmed so working ones stand out.
@@ -105,16 +122,16 @@ that opens or moves has a visible label, chevron or button.
 90. `[I90]` Search says how many results it found.
 91. `[I91]` The letters that matched are highlighted in results.
 92. `[I92]` "Opened recently" chips on Maloomat.
-93. `[I93]` Section headings stay pinned under the top bar while scrolling.
+93. ~~Section headings stay pinned under the top bar while scrolling~~ (removed)
 94. `[I94]` Each Maloomat section has its own icon tint.
 95. `[I95]` "Nothing matches" shows an icon and a sentence.
-96. `[I96]` The search icon pops and the field glows when focused.
+96. ~~The search icon pops and the field glows when focused~~ (removed)
 97. `[I97]` The keyboard shows a Search key and closes on submit.
 98. `[I98]` Info pages show which section they belong to above the title.
 99. `[I99]` A Share button on every info page.
 100. `[I100]` Previous and Next links at the foot of each info page.
 101. `[I101]` Numbered steps are joined by a line.
-102. `[I102]` The warning box has a pulsing alert badge.
+102. `[I102]` The warning box has an alert badge.
 103. `[I103]` Lines that must not be missed carry a warning mark as well as red.
 104. `[I104]` Pictures fade in from a soft blur when loaded.
 105. `[I105]` The full-screen picture view has a labelled Close button.
@@ -128,23 +145,23 @@ that opens or moves has a visible label, chevron or button.
 113. `[I113]` "Details coming soon" is a dashed chip with a clock, clearly not content.
 114. `[I114]` Wi-Fi steps are joined by a line between their numbers.
 115. `[I115]` A Wi-Fi value's tile flashes gold when copied.
-116. `[I116]` The Wi-Fi QR sits in a frame with glowing corner brackets.
+116. `[I116]` The Wi-Fi QR sits in a frame with corner brackets.
 117. `[I117]` The Copy button draws a check when it has copied.
 118. `[I118]` The Wi-Fi page says it is saved on the phone and works offline.
 119. `[I119]` Every info page ends with "Need help with this? Ask in Madad".
-120. `[I120]` Going back slides the other way from going forward.
-121. `[I121]` Cards below the fold settle in as they are reached (blur fade, as in Magic UI).
+120. ~~Going back slides the other way from going forward~~ (removed)
+121. ~~Cards below the fold settle in as they are reached (blur fade, as in Magic UI)~~ (removed)
 122. `[I122]` A reusable number-ticker component.
 123. `[I123]` A reusable self-drawing check mark.
-124. `[I124]` The app name in the arch has a slow travelling shine (shiny text, as in Magic UI).
-125. `[I125]` Most-asked tiles lean toward the finger (tilt card, as in React Bits).
-126. `[I126]` The glass rim's light shifts as the page scrolls.
-127. `[I127]` The light behind the page drifts with scrolling (parallax).
-128. `[I128]` The star lattice behind the page drifts very slowly.
+124. ~~The app name in the arch has a slow travelling shine (shiny text, as in Magic UI)~~ (removed)
+125. ~~Most-asked tiles lean toward the finger (tilt card, as in React Bits)~~ (removed)
+126. ~~The glass rim's light shifts as the page scrolls~~ (removed)
+127. ~~The light behind the page drifts with scrolling (parallax)~~ (removed)
+128. ~~The star lattice behind the page drifts very slowly~~ (removed)
 129. `[I129]` Buttons sink with an inner shadow when pressed.
-130. `[I130]` The main button has a slow sheen (shimmer button, as in Magic UI).
-131. `[I131]` The WhatsApp icon gives one small wiggle when it appears.
-132. `[I132]` Pills pop in with a spring.
+130. ~~The main button has a slow sheen (shimmer button, as in Magic UI)~~ (removed)
+131. ~~The WhatsApp icon gives one small wiggle when it appears~~ (removed)
+132. ~~Pills pop in with a spring~~ (removed)
 133. `[I133]` Chevrons nudge forward when their row is pressed.
 134. `[I134]` A thin loading line at the top while new content is fetched (as in NProgress).
 135. `[I135]` The Refresh icon spins while content loads.
@@ -167,7 +184,7 @@ that opens or moves has a visible label, chevron or button.
 152. `[I152]` Jumping to a day leaves it clear of the top bar.
 153. `[I153]` Home-screen shortcuts to Ziyarat, Wi-Fi and Madad.
 
-## Faults removed (53)
+## Counted pass: faults removed (53)
 
 1. `[F1]` The whole day was hidden behind an unmarked tap; it is now shown in full on Aaj.
 2. `[F2]` Dinner was hidden behind a Lunch/Dinner switch; both meals are now listed.

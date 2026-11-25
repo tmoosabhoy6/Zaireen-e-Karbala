@@ -1,7 +1,7 @@
 # Writes UX-CHANGELOG.md. Each line's code ([I12], [F3]) is marked in the source where it is implemented;
 # scripts/ux-ledger-check.mjs fails if any code is missing from the source.
 I = """Today's line fills with colour as the day goes on
-The marker of the current or next event pulses gold
+The marker of the current or next event is ringed in gold
 Every event of the day has its own icon (sunrise, sun, moon, cup, cutlery, book)
 The event happening now is lifted onto its own glass card
 A bar shows how far through the current namaz or meal window it is
@@ -11,7 +11,7 @@ Finished events get a check mark that draws itself
 The day's events rise in one after another on first view (animated list, as in Magic UI)
 Times are set in aligned (tabular) numerals
 The date line carries a calendar icon and the Hijri date from the menu
-Tonight's majlis is a gold row with a moving sheen and its booklet button
+Tonight's majlis is a gold row with its booklet button
 The room number counts up when it appears (number ticker, as in Magic UI)
 How to get in shows a key for Qasr and an open door for walk-in buildings
 The stay is drawn as a bar from arrival to departure with today marked
@@ -82,7 +82,7 @@ The wheelchair shortcut carries its icon
 A ziyarat that is today but not next is marked "Today"
 An empty schedule shows a calendar icon and a sentence
 Signed out, Ziyarat shows a lock, the reason, and one Sign in button
-The lost-person card's alert icon pulses
+The lost-person card carries an alert icon in a disc
 Contacts have round icons for phone and WhatsApp
 Call and WhatsApp buttons are colour-coded
 Contacts with no number yet are dimmed so working ones stand out
@@ -101,7 +101,7 @@ Info pages show which section they belong to above the title
 A Share button on every info page
 Previous and Next links at the foot of each info page
 Numbered steps are joined by a line
-The warning box has a pulsing alert badge
+The warning box has an alert badge
 Lines that must not be missed carry a warning mark as well as red
 Pictures fade in from a soft blur when loaded
 The full-screen picture view has a labelled Close button
@@ -115,7 +115,7 @@ FAQ answers open with a turning chevron
 "Details coming soon" is a dashed chip with a clock, clearly not content
 Wi-Fi steps are joined by a line between their numbers
 A Wi-Fi value's tile flashes gold when copied
-The Wi-Fi QR sits in a frame with glowing corner brackets
+The Wi-Fi QR sits in a frame with corner brackets
 The Copy button draws a check when it has copied
 The Wi-Fi page says it is saved on the phone and works offline
 Every info page ends with "Need help with this? Ask in Madad"
@@ -207,18 +207,36 @@ Fact rows were tight; they have more room
 Most-asked labels were clipped after two lines; the full label always shows
 English shown to Lisan readers was not marked as English for screen readers; it is""".split("\n")
 assert len(I) == 153 and len(F) == 53, (len(I), len(F))
-out = ["# UX changelog: counted pass", "",
-  "153 design and animation improvements and 53 faults removed, in one pass. Each line has a code; the same code",
-  "is written in the source at the place that implements it, and `node scripts/ux-ledger-check.mjs` fails if any",
-  "code is missing. So the count is checkable, not a claim.", "",
+# Effects taken out again in the next pass, when the owner found the app laggy and some effects gimmicky.
+REMOVED = {9, 19, 29, 34, 35, 48, 50, 51, 52, 53, 60, 93, 96, 120, 121, 124, 125, 126, 127, 128, 130, 131, 132}
+NEW = """The arch is a dial of the day: its gold line runs from 4 am at the left foot, over the point at midday, to 10 pm at the right foot; it is lit up to the present
+The sun sits on the arch at the current time, and becomes a crescent at night
+Every namaz, meal and majlis of the day is a mark on the arch, filled once it has passed
+The arch shows the time in Karbala, for zaereen whose phones are on another time zone
+The dock carries a live line on every screen: what is happening now or what comes next, with a countdown; it leads to today's list
+The room is a key card: a number plate, a gold eyelet, a tear line and a stub with the stay dates
+"For you today": three pages chosen by where the zair is in their stay (arriving, staying, leaving)
+Maloomat puts the section for today's stage of the stay first and marks it
+The ziyarat schedule reads as a route: a dashed line with date stations, filled once passed, the next one ringed in gold
+Nothing loops any more: motion only answers a touch or marks a screen arriving
+Live blur is used on the dock alone; the top bar, cards and toasts are still glass by colour only
+No whole-page snapshots when opening a page; no scroll-linked effects; no tilt or finger-tracking light
+Cards no longer fade in on scroll, so nothing looks washed out between sections
+The stylesheet was rebuilt from scratch at about half its size""".split("\n")
+kept = len(I) - len(REMOVED)
+out = ["# UX changelog", "",
+  "Each line has a code; the same code is written in the source at the place that implements it, and",
+  "`node scripts/ux-ledger-check.mjs` fails if a code that should be there is missing. So the counts are checkable.", "",
   "Patterns named \"as in ...\" are ones found in public component libraries (Magic UI, React Bits, Vaul, Sonner,",
-  "Radix, Material, NProgress). Each is written fresh for this app in plain CSS and a little TypeScript; no code",
-  "was copied and no library was added. Lines without a name are ordinary good practice, not a library pattern.", "",
-  "Guiding rule for this pass (owner's instruction): **nothing is hidden**. Information is shown in full; anything",
-  "that opens or moves has a visible label, chevron or button.", "",
-  f"## Improvements ({len(I)})", ""]
-out += [f"{n}. `[I{n}]` {t}." for n, t in enumerate(I, 1)]
-out += ["", f"## Faults removed ({len(F)})", ""]
+  "Radix, Material, NProgress). Each is written fresh for this app; no code was copied and no library was added.",
+  "Lines without a name are ordinary good practice, not a library pattern.", "",
+  "Two rules from the owner govern everything here: **nothing is hidden**, and **nothing loops or lags**.", "",
+  f"## Final pass: faster, calmer, and reinvented ({len(NEW)})", ""]
+out += [f"{n}. {t}." for n, t in enumerate(NEW, 1)]
+out += ["", f"## Counted pass: improvements ({len(I)} made, {len(REMOVED)} later removed, {kept} in the app)", "",
+  "Struck-through lines were removed in the final pass because they looped, shimmered or cost speed.", ""]
+out += [(f"{n}. ~~{t}~~ (removed)" if n in REMOVED else f"{n}. `[I{n}]` {t}.") for n, t in enumerate(I, 1)]
+out += ["", f"## Counted pass: faults removed ({len(F)})", ""]
 out += [f"{n}. `[F{n}]` {t}." for n, t in enumerate(F, 1)]
 open("UX-CHANGELOG.md", "w").write("\n".join(out) + "\n")
-print("UX-CHANGELOG.md:", len(I), "improvements,", len(F), "faults")
+print("UX-CHANGELOG.md:", kept, "improvements in the app,", len(REMOVED), "removed,", len(F), "faults,", len(NEW), "new")

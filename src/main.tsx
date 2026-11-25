@@ -3,13 +3,13 @@ import { createRoot } from "react-dom/client";
 import { ArrowUp, CalendarDays, Info, LifeBuoy, Lock, LogIn, Sun, WifiOff } from "lucide-react";
 import "./styles.css";
 import { karbalaNow } from "../shared/time";
-import { Toaster, haptic, toast, useGlassFx, useScrolled } from "./fx";
+import { Toaster, fmtWait, haptic, toast, useGlassFx, useScrolled } from "./fx";
 import { tr, tr2, type Key, type Lang } from "./i18n";
 import { go, usePath } from "./router";
-import { Aaj, Community, LostPerson, MadadContacts, Maloomat, PageView, hasUnread, useKarbalaClock } from "./screens";
+import { Aaj, Community, LostPerson, MadadContacts, Maloomat, PageView, hasUnread, liveNow, stageOf, useKarbalaClock } from "./screens";
 import { loadMe, useMe } from "./session";
 import { byId, inGroup, loc, refresh, setLang, useLiveContent, useStore } from "./store";
-import { PageLink, Tab, fmt, type Ctx } from "./ui";
+import { PageLink, Tab, fallbackProps, fmt, type Ctx } from "./ui";
 import { ArchForMe, RoomCard, Schedule, SignInForm, SignedInBar, WifiSteps } from "./zair";
 
 /** Not linked from anywhere in the app. */
@@ -29,22 +29,33 @@ const link = (path: string) => ({ href: path, onClick: (e: React.MouseEvent) => 
  * The floating dock. Its lens is one piece of glass that slides to a tab the moment the tab is touched,
  * without waiting for the screen underneath to change.
  */
-function Dock({ tab, lang, unread }: { tab: string; lang: Lang; unread: boolean }) {
+function Dock({ tab, lang, unread, live }: { tab: string; lang: Lang; unread: boolean; live: ReturnType<typeof liveNow> }) {
   const current = TABS.findIndex((t) => t.path === tab);
   const [touched, setTouched] = useState<number | null>(null);
   useEffect(() => setTouched(null), [tab]);
   const at = touched ?? current;
   return (
-    <nav className="dock frost" aria-label="Main" style={{ ["--i" as string]: Math.max(at, 0) }}>
-      <span className={`dock-lens${at < 0 ? " off" : ""}`} aria-hidden="true"><i key={at} /></span>
-      {TABS.map(({ path: p, key, icon: I }, i) => (
-        <a key={p} href={p} aria-current={tab === p ? "page" : undefined} data-on={at === i ? "" : undefined}
-          onPointerDown={() => setTouched(i)} onPointerLeave={() => setTouched(null)} onPointerCancel={() => setTouched(null)}
-          onClick={(e) => { e.preventDefault(); if (tab !== p) haptic(6); go(p); }}>
-          <span className="dock-ic"><I size={23} strokeWidth={1.8} aria-hidden="true" />{i === 0 && unread && tab !== "/" && <i className="dot" aria-hidden="true" />}</span> {/* [I24] */}
-          <span>{tr(lang, key)}</span>
+    <nav className="dock frost" aria-label="Main">
+      {live && (
+        // The live line: on every screen, what is happening now or what comes next. It leads to today's list.
+        <a className="dock-live" href="/" onClick={(e) => { e.preventDefault(); haptic(6); go("/"); setTimeout(() => document.getElementById("today")?.scrollIntoView({ behavior: "smooth", block: "start" }), 60); }}>
+          <i className={live.now ? "live" : "live next"} aria-hidden="true" />
+          <b>{tr(lang, live.now ? "now" : "next")}</b>
+          <span className="dock-live-text" {...fallbackProps(live.fallback)}>{live.label} · {live.value}</span>
+          <bdi className="count" dir="ltr">{fmtWait(live.wait)}</bdi>
         </a>
-      ))}
+      )}
+      <div className="dock-tabs" style={{ ["--i" as string]: Math.max(at, 0) }}>
+        <span className={`dock-lens${at < 0 ? " off" : ""}`} aria-hidden="true"><i key={at} /></span>
+        {TABS.map(({ path: p, key, icon: I }, i) => (
+          <a key={p} href={p} aria-current={tab === p ? "page" : undefined} data-on={at === i ? "" : undefined}
+            onPointerDown={() => setTouched(i)} onPointerLeave={() => setTouched(null)} onPointerCancel={() => setTouched(null)}
+            onClick={(e) => { e.preventDefault(); if (tab !== p) haptic(6); go(p); }}>
+            <span className="dock-ic"><I size={23} strokeWidth={1.8} aria-hidden="true" />{i === 0 && unread && tab !== "/" && <i className="dot" aria-hidden="true" />}</span> {/* [I24] */}
+            <span>{tr(lang, key)}</span>
+          </a>
+        ))}
+      </div>
     </nav>
   );
 }
@@ -97,7 +108,7 @@ function App() {
     window.addEventListener("offline", off);
     return () => { window.removeEventListener("online", on); window.removeEventListener("offline", off); };
   }, [lang]);
-  // [I53] The light behind the glass follows the time of day in Karbala.
+  // The light behind the glass follows the time of day in Karbala.
   useEffect(() => {
     const m = now.minutes;
     document.documentElement.dataset.phase = m >= 270 && m < 420 ? "dawn" : m >= 420 && m < 1020 ? "day" : m >= 1020 && m < 1170 ? "dusk" : "night";
@@ -116,6 +127,9 @@ function App() {
 
   const tab = path.startsWith("/p/") ? "/maloomat" : TABS.some((t) => t.path === path) ? path : path === "/signin" ? "" : "/";
   const ctx: Ctx | null = payload ? { lang, payload, minutes: now.minutes } : null;
+  const stage = me && payload ? stageOf(me.stay, payload.today) : null;
+  const live = ctx ? liveNow(ctx) : null;
+  useEffect(() => { document.documentElement.style.setProperty("--dock-h", live ? "110px" : "66px"); }, [!!live]);
   const pageTitle = path.startsWith("/p/") ? loc(byId(payload, `page.${path.slice(3)}`), "title", lang) : path === "/signin" ? tr2(lang, "signInTitle") : tr(lang, TABS.find((t) => t.path === tab)?.key ?? "tabAaj");
   // [F16] Each screen names itself in the browser and the app switcher.
   useEffect(() => { if (!path.startsWith(ADMIN_PATH)) document.title = `${pageTitle} · ${tr(lang, "appName")}`; }, [pageTitle, lang, path]);
@@ -153,14 +167,14 @@ function App() {
         </>
       );
     } else if (tab === "/maloomat") {
-      screen = <Maloomat ctx={ctx} />;
+      screen = <Maloomat ctx={ctx} stage={stage} />;
     } else {
       screen = (
-        <Aaj ctx={ctx} at={at} loading={loading} room={me ? <RoomCard me={me} ctx={ctx} /> : null} arch={me ? <ArchForMe me={me} ctx={ctx} now={now} /> : (
+        <Aaj ctx={ctx} at={at} loading={loading} stage={stage} room={me ? <RoomCard me={me} ctx={ctx} /> : null} arch={me ? <ArchForMe me={me} ctx={ctx} now={now} /> : (
           // [F8] Signed out there is one sign-in prompt, in the arch. [F47] The extra tile and its cryptic "Tour ID + ITS number" line are gone.
           <div className="arch-swap">
             <p className="arch-kicker">Faiz-e-Husaini</p> {/* [I30] */}
-            <h1 className="arch-title shiny">{tr(lang, "appName")}</h1> {/* [I29] [I124] */}
+            <h1 className="arch-title shiny">{tr(lang, "appName")}</h1> 
             <p className="arch-detail">{tr(lang, "signInLead")}</p>
             <div className="arch-actions"><a className="btn-cream" {...link("/signin")}><LogIn size={18} aria-hidden="true" />{tr(lang, "signIn")}</a></div>
           </div>
@@ -204,7 +218,7 @@ function App() {
       {/* [I45] A labelled way back to the top of a long page. */}
       {scrolled && <button type="button" className="totop frost" onClick={() => { haptic(); window.scrollTo({ top: 0, behavior: "smooth" }); }}><ArrowUp size={18} aria-hidden="true" />{tr2(lang, "toTop")}</button>}
       <Toaster />
-      <Dock tab={tab} lang={lang} unread={hasUnread(payload)} />
+      <Dock tab={tab} lang={lang} unread={hasUnread(payload)} live={live} />
     </div>
   );
 }

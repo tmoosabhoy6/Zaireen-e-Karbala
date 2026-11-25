@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import {
   AlertTriangle, BookOpen, CalendarDays, ChevronDown, ChevronLeft, ChevronRight, Clock, Coffee, Download, History, Hourglass, LifeBuoy,
-  Megaphone, MessageCircle, Moon, RefreshCw, Search, SearchX, Share2, Sparkles, Sun, Sunrise, Utensils, X, Maximize2,
+  Megaphone, MessageCircle, Moon, Compass, RefreshCw, Search, SearchX, Share2, Sparkles, Sun, Sunrise, Utensils, X, Maximize2,
 } from "lucide-react";
 import { addDays, karbalaNow, parseClock, parseRange } from "../shared/time";
 import { PLACES, majlisDefault, type Assembly, type PlaceId } from "../shared/ziyarat";
@@ -9,7 +9,7 @@ import { DrawCheck, Reveal, fmtWait, haptic, toast, useInstall } from "./fx";
 import { tr, tr2, type Key, type Lang } from "./i18n";
 import { back, go } from "./router";
 import { byId, inGroup, loc, refresh, type Item, type Payload } from "./store";
-import { Blocks, Fact, Icon, Lightbox, MenuCard, Office, Pic, T, Tab, fallbackProps, fmt, type Ctx } from "./ui";
+import { Blocks, Fact, Icon, Lightbox, MenuCard, Office, PageLink, Pic, T, Tab, fallbackProps, fmt, type Ctx } from "./ui";
 
 const link = (path: string) => ({ href: path, onClick: (e: React.MouseEvent) => { e.preventDefault(); go(path); } });
 
@@ -40,13 +40,26 @@ function archPath(w: number, h: number, inset: number, r: number): string {
   return `M${x0} ${yb - r}V${sh}C${x0} ${c1} ${w * 0.31} ${c2} ${w / 2} ${top}C${w * 0.69} ${c2} ${x1} ${c1} ${x1} ${sh}V${yb - r}Q${x1} ${yb} ${x1 - r} ${yb}H${x0 + r}Q${x0} ${yb} ${x0} ${yb - r}Z`;
 }
 
+/** The arch's inner line as an open path: from the left foot, over the point, to the right foot. */
+function dialPath(w: number, h: number, inset: number): string {
+  const x0 = inset, x1 = w - inset, yb = h - inset - 16, top = inset * 1.25, sh = CAP * 0.79 + inset * 0.3;
+  const c1 = top + (sh - top) * 0.5, c2 = top + (sh - top) * 0.36;
+  return `M${x0} ${yb}V${sh}C${x0} ${c1} ${w * 0.31} ${c2} ${w / 2} ${top}C${w * 0.69} ${c2} ${x1} ${c1} ${x1} ${sh}V${yb}`;
+}
+const DIAL_FROM = 4 * 60, DIAL_TO = 22 * 60;
+const dialAt = (m: number) => Math.min(1, Math.max(0, (m - DIAL_FROM) / (DIAL_TO - DIAL_FROM)));
+
 /**
- * The four-centred arch of a shrine gateway: holds the one thing that matters most right now.
- * A thread of gold light travels round its inner line.
+ * The arch of the day. The four-centred arch of a shrine gateway holds the one thing that matters most
+ * right now, and its gold line is a dial: it runs from 4 am at the left foot, over the point at midday,
+ * to 10 pm at the right foot. The line is lit up to the present, the sun sits at "now", and each namaz,
+ * meal and majlis of the day is a mark on it. It is redrawn when the minute changes; nothing loops.
  */
-export function Arch({ children }: { children: ReactNode }) {
+export function Arch({ children, minutes, marks = [], lang }: { children: ReactNode; minutes: number; marks?: number[]; lang: Lang }) {
   const ref = useRef<HTMLElement>(null);
-  const [box, setBox] = useState({ w: 358, h: 210 });
+  const dial = useRef<SVGPathElement>(null);
+  const [box, setBox] = useState({ w: 358, h: 236 });
+  const [pts, setPts] = useState<{ sun: [number, number]; ticks: [number, number, boolean][] } | null>(null);
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
@@ -57,23 +70,35 @@ export function Arch({ children }: { children: ReactNode }) {
     return () => ro.disconnect();
   }, []);
   const { w, h } = box;
+  const night = minutes < DIAL_FROM || minutes >= DIAL_TO;
+  const at = minutes < DIAL_FROM ? 0 : dialAt(minutes);
+  useLayoutEffect(() => {
+    const p = dial.current;
+    if (!p) return;
+    const len = p.getTotalLength();
+    const xy = (k: number): [number, number] => { const q = p.getPointAtLength(len * k); return [q.x, q.y]; };
+    setPts({ sun: xy(at), ticks: marks.filter((m) => m >= DIAL_FROM && m <= DIAL_TO).map((m) => [...xy(dialAt(m)), m <= minutes] as [number, number, boolean]) });
+  }, [w, h, at, minutes, marks.join()]);
   const outer = archPath(w, h, 0, 26);
-  const inner = archPath(w, h, 7, 20);
+  const line = dialPath(w, h, 8);
   return (
     <section className="arch" ref={ref}>
       <svg className="arch-svg" viewBox={`0 0 ${w} ${h}`} width={w} height={h} aria-hidden="true">
         <defs>
           <linearGradient id="arch-grad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#96321f" /><stop offset="0.45" stopColor="#74200f" /><stop offset="1" stopColor="#56130a" /></linearGradient>
-          <radialGradient id="arch-glow" cx="0.5" cy="0" r="0.9"><stop offset="0" stopColor="#ffd9a8" stopOpacity="0.3" /><stop offset="0.6" stopColor="#ffd9a8" stopOpacity="0" /></radialGradient>
-          <clipPath id="arch-clip"><path d={outer} /></clipPath>
         </defs>
         <path d={outer} fill="url(#arch-grad)" />
-        <path className="arch-glow" d={outer} fill="url(#arch-glow)" /> {/* [I34] */}
-        <g clipPath="url(#arch-clip)"><rect className="arch-shine" x={-w * 0.5} y={-h * 0.2} width={w * 0.45} height={h * 1.4} /></g>
-        <path className="arch-line" d={inner} />
-        <path className="arch-beam" d={inner} pathLength={100} />
+        <path ref={dial} className="dial-track" d={line} />
+        <path className="dial-done" d={line} pathLength={100} strokeDasharray={`${(at * 100).toFixed(2)} 100`} />
+        {pts?.ticks.map(([x, y, past], i) => <circle key={i} className={past ? "dial-tick past" : "dial-tick"} cx={x} cy={y} r={3.4} />)}
+        {pts && (night
+          ? <g className="dial-moon"><circle cx={pts.sun[0]} cy={pts.sun[1]} r={8} /><circle className="cut" cx={pts.sun[0] + 3.5} cy={pts.sun[1] - 2.5} r={6.5} /></g>
+          : <g className="dial-sun"><circle className="halo" cx={pts.sun[0]} cy={pts.sun[1]} r={13} /><circle cx={pts.sun[0]} cy={pts.sun[1]} r={7} /></g>)}
       </svg>
-      <div className="arch-in">{children}</div>
+      <div className="arch-in">
+        <p className="arch-clock">{night ? <Moon size={15} aria-hidden="true" /> : <Sun size={15} aria-hidden="true" />}<bdi dir="ltr">{fmt(minutes)}</bdi><span>{tr2(lang, "karbala")}</span></p>
+        {children}
+      </div>
     </section>
   );
 }
@@ -123,7 +148,7 @@ function Today({ ctx }: { ctx: Ctx }) {
   const next = upcoming[0] ?? null;
   const done = rows.filter((r) => r.at !== null && (r.end ?? r.at) <= minutes).length;
   return (
-    <section className="block today">
+    <section className="block today" id="today">
       <h2 className="card-title"><Clock size={20} aria-hidden="true" />{tr(lang, "todayTimes")}</h2>
       <p className="date-line" dir="ltr"><CalendarDays size={16} aria-hidden="true" />{longDate(payload.today)}{payload.menu?.hijri ? ` / ${payload.menu.hijri}` : ""}</p> {/* [I11] */}
       {/* [I1] The line fills with colour as the day goes on. */}
@@ -132,7 +157,7 @@ function Today({ ctx }: { ctx: Ctx }) {
           const state = r === current ? "now" : r === next ? "next" : r.at !== null && (r.end ?? r.at) <= minutes ? "past" : "";
           const RowIcon = r.icon;
           return (
-            <li key={r.key} className={`${state}${r.majlis ? " majlis" : ""}`} style={{ ["--i" as string]: i }}> {/* [I9] [I4] [I12] */}
+            <li key={r.key} className={`${state}${r.majlis ? " majlis" : ""}`} style={{ ["--i" as string]: i }}> {/* [I4] [I12] */}
               <span className="dayline-mark" aria-hidden="true">{state === "past" && <DrawCheck size={11} />}</span> {/* [I8] [I2] */}
               <span className="dayline-ic" aria-hidden="true"><RowIcon size={19} /></span>
               <div className="dayline-main" {...fallbackProps(r.fallback)}>
@@ -158,12 +183,50 @@ function Today({ ctx }: { ctx: Ctx }) {
   );
 }
 
+/** The one line the dock carries on every screen: what is happening now, or what comes next. */
+export function liveNow(ctx: Ctx): { now: boolean; label: string; value: string; wait: number; fallback: boolean } | null {
+  const rows = dayRows(ctx);
+  const { minutes } = ctx;
+  const current = rows.find((r) => r.at !== null && r.end !== undefined && minutes >= r.at && minutes < r.end);
+  if (current) return { now: true, label: current.label, value: current.value.split("\n")[0], wait: current.end! - minutes, fallback: current.fallback };
+  const next = rows.find((r) => r.at !== null && r.at > minutes) ?? rows.find((r) => r.at !== null);
+  if (!next || next.at === null) return null;
+  return { now: false, label: next.label, value: next.value.split("\n")[0], wait: next.at > minutes ? next.at - minutes : next.at + 1440 - minutes, fallback: next.fallback };
+}
+
+/** Where the zair is in their stay. Pages and sections are put in the order that suits that day. */
+export type Stage = "arrive" | "stay" | "leave";
+export function stageOf(stay: { arrival: string | null; departure: string | null } | null | undefined, today: string): Stage | null {
+  if (!stay) return null;
+  if (stay.departure && today >= addDays(stay.departure, -1)) return "leave";
+  if (stay.arrival && today <= stay.arrival) return "arrive";
+  return "stay";
+}
+const FOR_STAGE: Record<Stage, string[]> = {
+  arrive: ["page.room", "page.izan", "page.wifi"],
+  stay: ["page.libas", "page.bring", "page.offices"],
+  leave: ["page.departure", "page.lost", "page.private"],
+};
+const FIRST_SECTION: Record<Stage, string> = { arrive: "stay", stay: "ziyarat", leave: "travel" };
+
+/** Three pages chosen for today: arriving, during the stay, or leaving. */
+function ForToday({ ctx, stage }: { ctx: Ctx; stage: Stage }) {
+  const pages = FOR_STAGE[stage].map((id) => byId(ctx.payload, id)).filter((p): p is Item => !!p);
+  if (!pages.length) return null;
+  return (
+    <section>
+      <Tab icon={<Compass size={18} aria-hidden="true" />}>{tr2(ctx.lang, "forToday")}</Tab>
+      <div className="rows">{pages.map((p) => <PageLink key={p.id} item={p} lang={ctx.lang} />)}</div>
+    </section>
+  );
+}
+
 export function Community({ ctx }: { ctx: Ctx }) {
   const f = byId(ctx.payload, "fact.community.url");
   if (!f || !f.data.v) return null;
   return (
     <a className="btn-whatsapp" href={f.data.v} target="_blank" rel="noopener noreferrer">
-      <MessageCircle size={22} aria-hidden="true" /><span>{tr(ctx.lang, "joinCommunity")}</span> {/* [I131] */}
+      <MessageCircle size={22} aria-hidden="true" /><span>{tr(ctx.lang, "joinCommunity")}</span> 
     </a>
   );
 }
@@ -252,16 +315,17 @@ function Install({ lang }: { lang: Lang }) {
 }
 
 /** Aaj: everything in plain view, top to bottom. Nothing is behind an unmarked tap or a drag-only sheet. [F6] [F10] */
-export function Aaj({ ctx, arch, room, at, loading }: { ctx: Ctx; arch: ReactNode; room: ReactNode; at: number | null; loading: boolean }) {
+export function Aaj({ ctx, arch, room, at, loading, stage }: { ctx: Ctx; arch: ReactNode; room: ReactNode; at: number | null; loading: boolean; stage: Stage | null }) {
   const { lang, payload } = ctx;
   const tiles = payload.items.filter((i) => i.kind === "page" && i.data.tile).sort((a, b) => Number(a.data.tile) - Number(b.data.tile));
   const Chevron = lang === "lud" ? ChevronLeft : ChevronRight;
   return (
     <div className="aaj">
-      <Arch>{arch}</Arch>
+      <Arch minutes={ctx.minutes} lang={lang} marks={dayRows(ctx).map((r) => r.at).filter((n): n is number => n !== null)}>{arch}</Arch>
       <div className="cols">
         <div className="col">
           {room}
+          {stage && <ForToday ctx={ctx} stage={stage} />}
           <Today ctx={ctx} />
         </div>
         <div className="col">
@@ -276,7 +340,7 @@ export function Aaj({ ctx, arch, room, at, loading }: { ctx: Ctx; arch: ReactNod
                 {tiles.slice(0, 4).map((p, i) => (
                   // [I36] Each tile carries a chevron, so it reads as something to tap.
                   <a key={p.id} className="qtile pane" style={{ ["--i" as string]: i }} {...link(`/p/${p.id.slice(5)}`)}>
-                    <span className="qtile-ic"><Icon name={p.icon} size={24} /></span> {/* [I35] */}
+                    <span className="qtile-ic"><Icon name={p.icon} size={24} /></span> 
                     <T item={p} field="title" lang={lang} />
                     <Chevron size={18} aria-hidden="true" className="qtile-go" />
                   </a>
@@ -343,8 +407,6 @@ function PageTile({ item, lang, i, needle = "" }: { item: Item; lang: Lang; i: n
     <a className="ptile pane" data-sec={item.grp} style={{ ["--i" as string]: i }} href={path}
       onClick={(e) => {
         e.preventDefault();
-        const ic = e.currentTarget.querySelector<HTMLElement>(".ptile-ic");
-        if (ic) ic.style.viewTransitionName = "page-ic";
         go(path);
       }}>
       <span className="ptile-ic"><Icon name={item.icon} /></span> {/* [I94] */}
@@ -354,7 +416,7 @@ function PageTile({ item, lang, i, needle = "" }: { item: Item; lang: Lang; i: n
   );
 }
 
-export function Maloomat({ ctx }: { ctx: Ctx }) {
+export function Maloomat({ ctx, stage }: { ctx: Ctx; stage: Stage | null }) {
   const { lang, payload } = ctx;
   // [F14] The search text survives a visit to a page and back.
   const [q, setQ] = useState(() => { try { return sessionStorage.getItem("zk.q") || ""; } catch { return ""; } });
@@ -368,7 +430,7 @@ export function Maloomat({ ctx }: { ctx: Ctx }) {
   return (
     <>
       <form className="search pane" role="search" onSubmit={(e) => { e.preventDefault(); input.current?.blur(); /* [I97] */ }}>
-        <Search size={20} aria-hidden="true" /> {/* [I96] */}
+        <Search size={20} aria-hidden="true" /> 
         <input ref={input} type="search" enterKeyHint="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder={tr2(lang, "searchInfo")} aria-label={tr2(lang, "searchInfo")} />
         {q && <button type="button" className="search-x" onClick={() => { setQ(""); input.current?.focus(); }} aria-label={tr2(lang, "clear")}><X size={18} aria-hidden="true" /></button>} {/* [I89] */}
       </form>
@@ -387,11 +449,12 @@ export function Maloomat({ ctx }: { ctx: Ctx }) {
               <div className="chips">{recent.map((p) => <a key={p.id} className="chip" {...link(`/p/${p.id.slice(5)}`)}><Icon name={p.icon} size={17} /><T item={p} field="title" lang={lang} /></a>)}</div>
             </section>
           )}
-          {SECTIONS.map(([id, key]) => {
+          {/* The section that suits today's stage of the stay comes first. */}
+          {[...SECTIONS].sort((a, b) => Number(b[0] === (stage && FIRST_SECTION[stage])) - Number(a[0] === (stage && FIRST_SECTION[stage]))).map(([id, key]) => {
             const pages = inGroup(payload, "page", id);
             return pages.length ? (
               <section key={id}>
-                <Tab>{tr(lang, key)}</Tab> {/* [I93] */}
+                <Tab>{tr(lang, key)}{stage && FIRST_SECTION[stage] === id && <span className="pill next">{tr2(lang, "forToday")}</span>}</Tab>
                 <div className="ptiles">{pages.map((p) => <PageTile key={p.id} item={p} lang={lang} i={n++} />)}</div>
               </section>
             ) : null;

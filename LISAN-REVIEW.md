@@ -302,6 +302,8 @@ These are in the code (`src/i18n.ts`), not in admin, and are live now in Lisan u
 | linkCopied | Link copied | Link copy تهئي گئي |
 | clear | Clear search | تلاش صاف كرو |
 | bringToggle | What to bring and dress | سوں لاوو انے لباس |
+| forToday | For you today | اْج تمارا واسطے |
+| karbala | Karbala | كربلاء |
 
 ## Points I was unsure of
 

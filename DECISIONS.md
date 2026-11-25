@@ -82,3 +82,14 @@ Ideas only: every effect is written for this app in plain CSS and a few lines of
 - The Sheet is an Excel file in Drive whose ACCOMMODATION tab is a grid of room by night, with free text such as an agent label and a four-digit tour number. **It has no ITS column**: it can say which rooms a tour has, not which room a person has.
 - So it cannot replace NKERP for "a zair sees only their own room". About half of tours occupy a single room; for those, the Sheet could supply the room once NKERP has confirmed the ITS is on the tour.
 - Reading it from the Worker would need the file shared with a service account and parsed as xlsx (the Sheets API does not read Office files). Not done: it needs the owner's decision.
+
+## Final pass: calm, fast, reinvented (owner found the app laggy and some effects gimmicky)
+- **Nothing loops.** The moving light on the arch and borders, shimmers, pulses, drifting background, tilt and finger-tracking light, scroll-linked effects and fade-in-on-scroll are all removed. Motion only answers a touch or marks a screen arriving. The only things that animate on their own are the spinner and load line while something is loading.
+- **Live blur only on the dock.** The top bar, cards and toasts are glass by colour, not by blur. No whole-page snapshots when opening a page.
+- The stylesheet was rebuilt from scratch (712 lines to about 370). Measured under a six-times slowed CPU, an idle Aaj went from 182 style recalculations in three seconds to none.
+- **The arch of the day.** The arch's gold line is now a dial: 4 am at the left foot, midday at the point, 10 pm at the right foot. It is lit up to the present, the sun (a crescent at night) sits at "now", and each namaz, meal and majlis is a mark on it. It also shows the time in Karbala. It is redrawn when the minute changes.
+- **The dock's live line.** On every screen the dock says what is happening now or what comes next, with a countdown; tapping it opens today's list.
+- **The room is a key card** (number plate, eyelet, tear line, stay stub).
+- **Stage of stay.** From the stay dates the app knows whether the zair is arriving, staying or leaving. Aaj shows three pages "For you today" and Maloomat puts that stage's section first. Signed-out visitors see the normal order.
+- **The schedule is a route**: a dashed line with date stations, filled once passed, the next ringed in gold.
+- `UX-CHANGELOG.md` now marks the 23 earlier effects that were removed, and lists this pass.

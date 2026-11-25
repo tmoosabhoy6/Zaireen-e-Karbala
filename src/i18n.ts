@@ -146,6 +146,8 @@ const S2 = {
   linkCopied: ["Link copied", "Link copy تهئي گئي"],
   clear: ["Clear search", "تلاش صاف كرو"],
   bringToggle: ["What to bring and dress", "سوں لاوو انے لباس"],
+  forToday: ["For you today", "اْج تمارا واسطے"],
+  karbala: ["Karbala", "كربلاء"],
 } as const;
 export type Key2 = keyof typeof S2;
 export const tr2 = (lang: Lang, key: Key2): string => S2[key][lang === "lud" ? 1 : 0];

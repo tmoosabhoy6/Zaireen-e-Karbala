@@ -60,21 +60,9 @@ export function Toaster() {
   );
 }
 
-// ---- [I121] Blur-fade reveal: cards below the fold settle in as they are scrolled to ----
-let io: IntersectionObserver | null = null;
-const observer = () => (io ??= new IntersectionObserver((entries) => {
-  for (const e of entries) if (e.isIntersecting) { e.target.classList.add("in"); io!.unobserve(e.target); }
-}, { rootMargin: "0px 0px -6% 0px" }));
+/** A plain section. (It used to fade cards in on scroll; that washed sections out and cost speed, so it is gone.) */
 export function Reveal({ as: Tag = "div", className = "", children, ...rest }: { as?: any; className?: string; children: ReactNode; [k: string]: unknown }) {
-  const ref = useRef<HTMLElement>(null);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    if (calm() || typeof IntersectionObserver === "undefined") return el.classList.add("in");
-    observer().observe(el);
-    return () => io?.unobserve(el);
-  }, []);
-  return <Tag ref={ref} className={`reveal ${className}`} {...rest}>{children}</Tag>;
+  return <Tag className={className} {...rest}>{children}</Tag>;
 }
 
 /** True once the page has been scrolled past `px` (for the back-to-top button). */
@@ -104,60 +92,24 @@ export function useInstall() {
   return ev ? async () => { await ev.prompt(); installEvent = null; installSubs.forEach((fn) => fn()); } : null;
 }
 
-/**
- * Makes the glass react to touch and tilt:
- * - [I37] a ripple spreads from the finger on buttons and tiles
- * - the sheen on a pane follows the finger, and [I125] quick tiles lean toward it
- * - on phones that report tilt without a permission prompt, the rim light shifts with the phone
- */
+/** [I37] A ripple spreads from the finger on buttons and tiles. Nothing else moves unless touched. */
 export function useGlassFx() {
   useEffect(() => {
     if (calm()) return;
     const RIPPLE = ".btn-main, .btn-quiet, .btn-whatsapp, .btn-cream, .btn-line, .qtile, .ptile, .row-link, .chip, .lost";
     const onDown = (e: PointerEvent) => {
       const host = (e.target as Element | null)?.closest?.<HTMLElement>(RIPPLE);
-      if (host) {
-        const r = host.getBoundingClientRect();
-        const dot = document.createElement("span");
-        dot.className = "ripple";
-        const size = Math.max(r.width, r.height) * 2;
-        dot.style.cssText = `width:${size}px;height:${size}px;left:${e.clientX - r.left - size / 2}px;top:${e.clientY - r.top - size / 2}px`;
-        host.appendChild(dot);
-        setTimeout(() => dot.remove(), 650);
-      }
-      onMove(e);
-    };
-    const onMove = (e: PointerEvent) => {
-      const el = (e.target as Element | null)?.closest?.<HTMLElement>(".pane");
-      if (!el) return;
-      const r = el.getBoundingClientRect();
-      el.style.setProperty("--mx", `${Math.round(e.clientX - r.left)}px`);
-      el.style.setProperty("--my", `${Math.round(e.clientY - r.top)}px`);
-      if (el.classList.contains("qtile")) {
-        el.style.setProperty("--ry", `${(((e.clientX - r.left) / r.width - 0.5) * 14).toFixed(1)}deg`);
-        el.style.setProperty("--rx", `${((0.5 - (e.clientY - r.top) / r.height) * 14).toFixed(1)}deg`);
-      }
+      if (!host) return;
+      const r = host.getBoundingClientRect();
+      const dot = document.createElement("span");
+      dot.className = "ripple";
+      const size = Math.max(r.width, r.height) * 2;
+      dot.style.cssText = `width:${size}px;height:${size}px;left:${e.clientX - r.left - size / 2}px;top:${e.clientY - r.top - size / 2}px`;
+      host.appendChild(dot);
+      setTimeout(() => dot.remove(), 500);
     };
     document.addEventListener("pointerdown", onDown, { passive: true });
-    document.addEventListener("pointermove", onMove, { passive: true });
-    let frame = 0;
-    const onTilt = (e: DeviceOrientationEvent) => {
-      if (frame || e.gamma === null || e.beta === null) return;
-      const tx = Math.max(-1, Math.min(1, e.gamma / 35)), ty = Math.max(-1, Math.min(1, (e.beta - 40) / 35));
-      frame = requestAnimationFrame(() => {
-        frame = 0;
-        document.documentElement.style.setProperty("--tx", tx.toFixed(3));
-        document.documentElement.style.setProperty("--ty", ty.toFixed(3));
-      });
-    };
-    // iOS asks the person for permission first; the app does not interrupt them for a visual touch.
-    const free = typeof DeviceOrientationEvent !== "undefined" && typeof (DeviceOrientationEvent as unknown as { requestPermission?: unknown }).requestPermission !== "function";
-    if (free) window.addEventListener("deviceorientation", onTilt, { passive: true });
-    return () => {
-      document.removeEventListener("pointerdown", onDown);
-      document.removeEventListener("pointermove", onMove);
-      if (free) window.removeEventListener("deviceorientation", onTilt);
-    };
+    return () => document.removeEventListener("pointerdown", onDown);
   }, []);
 }
 

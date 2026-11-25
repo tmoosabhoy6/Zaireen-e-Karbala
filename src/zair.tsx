@@ -139,7 +139,9 @@ export function RoomCard({ me, ctx }: { me: Me; ctx: Ctx }) {
   const StateIcon = kind === "wait" ? Clock : kind === "out" ? Building2 : CloudOff; // [I17]
   const Chevron = lang === "lud" ? ChevronLeft : ChevronRight;
   return (
-    <Reveal as="section" className="block room-card" data-kind={kind}>
+    <section className="keycard" data-kind={kind}>
+      <div className="kc-top">
+      <i className="kc-hole" aria-hidden="true" />
       <h2 className="card-title"><BedDouble size={20} aria-hidden="true" />{tr2(lang, "yourRoom")}</h2>
       {room ? (
         <>
@@ -148,6 +150,9 @@ export function RoomCard({ me, ctx }: { me: Me; ctx: Ctx }) {
           {enter?.fact && <p className="room-enter">{enter.key ? <KeyRound size={19} aria-hidden="true" /> : <DoorOpen size={19} aria-hidden="true" />}<T item={enter.fact} field="value" lang={lang} /></p>} {/* [I14] */}
         </>
       ) : <p className="room-state"><StateIcon size={22} aria-hidden="true" /><span>{text}</span></p>}
+      </div>
+      <div className="kc-tear" aria-hidden="true" />
+      <div className="kc-stub">
       {arrival && departure && (
         // [I15] The stay as a bar from arrival to departure, with today marked.
         <div className="stay" dir="ltr">
@@ -157,7 +162,8 @@ export function RoomCard({ me, ctx }: { me: Me; ctx: Ctx }) {
         </div>
       )}
       <a className="btn-quiet" {...link("/p/room")}>{tr2(lang, "notReady")}<Chevron size={18} aria-hidden="true" /></a> {/* [I16] */}
-    </Reveal>
+      </div>
+    </section>
   );
 }
 

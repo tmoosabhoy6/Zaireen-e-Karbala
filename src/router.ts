@@ -4,11 +4,9 @@ import { flushSync } from "react-dom";
 const listeners = new Set<() => void>();
 const notify = () => listeners.forEach((fn) => fn());
 
-/** Screen changes cross-fade and the dock's lens glides, where the browser supports view transitions. */
+/** Screens change at once. (Whole-page snapshots for cross-fades made opening a page feel late, so they are gone.) */
 function transition(change: () => void) {
-  const start = (document as Document & { startViewTransition?: (cb: () => void) => unknown }).startViewTransition;
-  if (!start || matchMedia("(prefers-reduced-motion: reduce)").matches) return change();
-  start.call(document, () => flushSync(change));
+  change();
 }
 
 const isPage = (path: string) => path.startsWith("/p/");
