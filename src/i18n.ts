@@ -100,7 +100,6 @@ const S2 = {
   wifiFirst: ["First field: your ITS number", "پظظلو خانه: اپنو ITS نمبر"],
   wifiSecond: ["Second field: your tour ID followed by 000", "بيجو خانه: اپني tour ID انے 000"],
   wifiQr: ["Or let someone scan this with their phone camera to join.", "يا كوئي بيجا نا phone نا camera سي اْ scan كري نے join كرو."],
-  wifiNeedsIts: ["Wi-Fi details are shown once your ITS is matched to your tour.", "تمارو ITS تمارا tour ساتهے ملي جائي بعد Wi-Fi ني تفصيل بتاوا ما اْوسے."],
   signedInAs: ["Signed in", "Signed in"],
   then: ["Then", "پچهي"],
   moreItems: ["more", "مزيد"],

@@ -28,7 +28,9 @@ const lines = (v: unknown) => (Array.isArray(v) ? v.map((x) => text(x, 200).trim
 
 route("GET", "/api/content", async ({ env, request }) => {
   const zair = await readSession(env, request, "zair");
-  const body = await publicPayload(env, !!(zair && (zair as { verified?: boolean }).verified));
+  // Signed-in content (the Wi-Fi steps) goes to anyone signed in with a valid tour ID: the owner's decision,
+  // so zaereen not staying in Faiz get it too. Rooms stay behind the NKERP check (see worker/zair.ts).
+  const body = await publicPayload(env, !!zair);
   return json(body);
 });
 

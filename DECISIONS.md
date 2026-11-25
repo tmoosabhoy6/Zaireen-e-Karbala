@@ -33,8 +33,9 @@ Small decisions made while building, newest last. Anything hard to undo was aske
 - **The schedule comes from the Sheet through zt's public Apps Script feed** (`?snapshot=1`), read-only. The Worker keeps the latest snapshot in D1 (without group or leader names) and refreshes it when older than five minutes.
 - **Four digits only (5253)**: the tour of that number whose Karbala days cover today wins, otherwise the nearest one.
 - **NKERP is read through a strict allowlist** (`worker/nkerp.ts`): login, role select, the "who is where" room search, the unallocated list and the four Karbala visit lists. Anything else throws before a request is made. A test checks that every known write path is refused.
-- **An ITS is "verified" when NKERP lists it on that tour** in the room search or the unallocated list (Karbala). Only then are the room and Wi-Fi shown.
-- **Not listed or NKERP unreachable: tour-level sign-in** (schedule and stay dates only). A tour ID can be guessed, so nothing personal is shown.
+- **An ITS is "verified" when NKERP lists it on that tour** in the room search or the unallocated list (Karbala). Only then is the room shown.
+- **Wi-Fi details open to anyone signed in with a valid tour ID** (owner's decision), so zaereen not staying in Faiz get them too. The steps show the ITS they typed.
+- **Not listed or NKERP unreachable: tour-level sign-in** (schedule, stay dates and Wi-Fi). A tour ID can be guessed, so nothing personal is shown.
 - **Room states**: assigned (building, room, floor, how to get in), not assigned yet, or cannot be shown right now. "How to get in" is chosen by building name (`fact.stay.enter.*`, admin-editable).
 - **Remembered until the day after departure** (cookie + the phone's storage). "Not you? Sign out" clears the session and everything saved on the phone.
 - **Rate limit**: 10 sign-in tries per 15 minutes per IP and per device.

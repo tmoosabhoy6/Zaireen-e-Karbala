@@ -237,7 +237,7 @@ export function WifiSteps({ me, ctx }: { me: Me | null; ctx: Ctx }) {
   if (!me) return <><p className="lead">{tr(lang, "wifiSignIn")}</p><a className="btn-main" style={{ marginTop: 14 }} {...link("/signin")}>{tr(lang, "signIn")}</a></>;
   const ssid = byId(payload, "fact.wifi.ssid");
   const pass = byId(payload, "fact.wifi.password");
-  if (!me.verified || !ssid) return <p className="lead">{tr2(lang, "wifiNeedsIts")}</p>;
+  if (!ssid) return <p className="lead">{tr(lang, "soon")}</p>;
   const name = ssid.t.value ?? "";
   const password = pass && !pass.missing ? pass.t.value ?? "" : "";
   const second = `${tourNumber(me.tour)}000`;

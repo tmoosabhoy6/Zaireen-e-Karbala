@@ -22,7 +22,7 @@ The brief's own milestone list (section 18) did not arrive, so this order is min
 - Madad shows contacts only; there are no request forms yet.
 - "Request a wheelchair for this ziyarat" goes to Madad, which has no form yet.
 - Izan card scanning, feedback cards, admin web push: not built.
-- A zair whose ITS NKERP does not list for the tour (for example staying outside Faiz) signs in at tour level: schedule and dates, a "not staying in Faiz accommodation" line, no Wi-Fi. NKERP has no validated roster read to confirm such an ITS.
+- A zair whose ITS NKERP does not list for the tour (for example staying outside Faiz) signs in at tour level: schedule, dates and Wi-Fi, with a "not staying in Faiz accommodation" line where the room would be.
 - Arrival and departure show dates only. NKERP also gives times and entry/exit ports; they are not shown until their meaning is confirmed.
 
 ## Waiting on the owner
