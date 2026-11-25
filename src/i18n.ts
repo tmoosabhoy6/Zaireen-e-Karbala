@@ -102,6 +102,12 @@ const S2 = {
   wifiQr: ["Or let someone scan this with their phone camera to join.", "يا كوئي بيجا نا phone نا camera سي اْ scan كري نے join كرو."],
   wifiNeedsIts: ["Wi-Fi details are shown once your ITS is matched to your tour.", "تمارو ITS تمارا tour ساتهے ملي جائي بعد Wi-Fi ني تفصيل بتاوا ما اْوسے."],
   signedInAs: ["Signed in", "Signed in"],
+  then: ["Then", "پچهي"],
+  moreItems: ["more", "مزيد"],
+  searchInfo: ["Search information", "معلومات ما تلاش كرو"],
+  noResults: ["Nothing matches. Try another word.", "كوئي چيز نتهي ملي. بيجو لفظ لكهو."],
+  signInTile: ["Your room and ziyarat", "تمارو Room انے زيارة"],
+  allDay: ["The whole day", "اْكهو دن"],
 } as const;
 export type Key2 = keyof typeof S2;
 export const tr2 = (lang: Lang, key: Key2): string => S2[key][lang === "lud" ? 1 : 0];

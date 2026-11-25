@@ -17,7 +17,6 @@ This file is the same list at the time of the last build, plus questions for you
 - Rules for what the WhatsApp bot must never say
 
 ## Questions for you
-- **Wi-Fi "tour ID + 000"**: for tour 26/5253, is the second field `5253000`? That is what the app will show.
 - **Map links** for Najmi Masjid and for Haram Mubarak gate 6: zt has none. Add them in admin (Timings and facts, Ziyarat assembly points) if you want an "Open map" button there.
 - **Buildings**: Karbala-Accommodation-Dashboard names only Amatullah and Qasr. Is Amatullah the one inside Faiz, and are there others?
 - **Lost and Found office hours**: the default office hours are shown. Correct them in admin if it has its own.

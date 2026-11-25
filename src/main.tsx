@@ -4,11 +4,11 @@ import { CalendarDays, Info, LifeBuoy, Sun } from "lucide-react";
 import "./styles.css";
 import { tr, type Key, type Lang } from "./i18n";
 import { go, usePath } from "./router";
-import { Aaj, LostPerson, MadadContacts, Maloomat, PageView, Community, useKarbalaClock } from "./screens";
+import { Aaj, Community, LostPerson, MadadContacts, Maloomat, PageView, SignInTile, useKarbalaClock } from "./screens";
+import { loadMe, useMe } from "./session";
 import { inGroup, refresh, setLang, useLiveContent, useStore } from "./store";
 import { PageLink, Tab, type Ctx } from "./ui";
-import { loadMe, useMe } from "./session";
-import { ArchForMe, Schedule, SignInForm, SignedInBar, StayCard, WifiSteps } from "./zair";
+import { ArchForMe, RoomTile, Schedule, SignInForm, SignedInBar, WifiSteps } from "./zair";
 
 /** Not linked from anywhere in the app. */
 export const ADMIN_PATH = "/daftar";
@@ -21,11 +21,14 @@ const TABS: { path: string; key: Key; icon: typeof Sun }[] = [
   { path: "/maloomat", key: "tabMaloomat", icon: Info },
 ];
 
-function LangToggle({ lang }: { lang: Lang }) {
+const link = (path: string) => ({ href: path, onClick: (e: React.MouseEvent) => { e.preventDefault(); go(path); } });
+
+function LangSwitch({ lang }: { lang: Lang }) {
   return (
-    <button type="button" className="lang" lang={lang === "lud" ? "en" : "ar"} onClick={() => setLang(lang === "lud" ? "en" : "lud")}>
-      {tr(lang, "otherLang")}
-    </button>
+    <div className="seg" dir="ltr" style={{ ["--i" as string]: lang === "lud" ? 1 : 0 }} role="group" aria-label="Language">
+      <button type="button" lang="en" aria-pressed={lang === "en"} onClick={() => setLang("en")}>English</button>
+      <button type="button" lang="ar" aria-pressed={lang === "lud"} onClick={() => setLang("lud")}>لسان الدعوة</button>
+    </div>
   );
 }
 
@@ -45,7 +48,6 @@ function App() {
   if (path.startsWith(ADMIN_PATH)) return <Suspense fallback={null}><Admin /></Suspense>;
 
   const tab = path.startsWith("/p/") ? "/maloomat" : TABS.some((t) => t.path === path) ? path : path === "/signin" ? "" : "/";
-  const home = path === "/";
   const ctx: Ctx | null = payload ? { lang, payload, minutes: now.minutes } : null;
 
   let screen = null;
@@ -58,14 +60,16 @@ function App() {
       screen = (
         <>
           {me ? <Schedule me={me} ctx={ctx} now={now} /> : (
-            <>
-              <p className="lead">{tr(lang, "ziyaratLead")}</p>
-              <a className="btn-main" style={{ marginTop: 14 }} href="/signin" onClick={(e) => { e.preventDefault(); go("/signin"); }}>{tr(lang, "signIn")}</a>
-            </>
+            <div className="stack">
+              <div className="block">
+                <p className="lead" style={{ marginTop: 0 }}>{tr(lang, "ziyaratLead")}</p>
+                <a className="btn-main" style={{ marginTop: 14 }} {...link("/signin")}>{tr(lang, "signIn")}</a>
+              </div>
+            </div>
           )}
           <Tab>{tr(lang, "secZiyarat")}</Tab>
           <div className="rows">{inGroup(ctx.payload, "page", "ziyarat").map((p) => <PageLink key={p.id} item={p} lang={lang} />)}</div>
-          {!me && <><Tab>{tr(lang, "announcements")}</Tab><Community ctx={ctx} /></>}
+          {!me && <div className="stack"><Community ctx={ctx} /></div>}
         </>
       );
     } else if (tab === "/madad") {
@@ -80,11 +84,12 @@ function App() {
       screen = <Maloomat ctx={ctx} />;
     } else {
       screen = (
-        <Aaj ctx={ctx} after={me ? <StayCard me={me} ctx={ctx} /> : null} arch={me ? <ArchForMe me={me} ctx={ctx} now={now} /> : (
+        <Aaj ctx={ctx} roomTile={me ? <RoomTile me={me} ctx={ctx} /> : <SignInTile lang={lang} />} arch={me ? <ArchForMe me={me} ctx={ctx} now={now} /> : (
           <>
+            <p className="arch-kicker">Faiz-e-Husaini</p>
             <h1 className="arch-title">{tr(lang, "appName")}</h1>
             <p className="arch-detail">{tr(lang, "signInLead")}</p>
-            <div className="arch-actions"><a className="btn-cream" href="/signin" onClick={(e) => { e.preventDefault(); go("/signin"); }}>{tr(lang, "signIn")}</a></div>
+            <div className="arch-actions"><a className="btn-cream" {...link("/signin")}>{tr(lang, "signIn")}</a></div>
           </>
         )} />
       );
@@ -93,33 +98,33 @@ function App() {
 
   return (
     <div className="app">
-      <header className={`top${home ? "" : " small"}`}>
-        <div className="top-bar">
-          <span className="top-name">{home ? "Faiz-e-Husaini" : tr(lang, "appName")}</span>
-          <LangToggle lang={lang} />
+      <div className="ambient" aria-hidden="true"><i /><i /><i /></div>
+      <header className="top frost">
+        <div className="top-row">
+          <a className="brand" {...link("/")} aria-label={tr(lang, "appName")}><img src="/brand/karbala-mualla.svg" alt="كربلاء المعلى" width="79" height="40" /></a>
+          <LangSwitch lang={lang} />
         </div>
-        <img className="calligraphy" src="/brand/karbala-mualla.svg" alt="كربلاء المعلى" width="600" height="304" />
+        {me && <SignedInBar me={me} lang={lang} />}
       </header>
-      {me && <SignedInBar me={me} lang={lang} />}
       {stale && <p className="notice">{tr(lang, "offline")}</p>}
       <main>
         {screen}
+        {!ctx && !failed && <div className="grid"><div className="skeleton wide" style={{ minHeight: 190 }} /><div className="skeleton" /><div className="skeleton" /><div className="skeleton wide" /></div>}
         {failed && (
-          <div className="block">
-            <p className="lead">{tr(lang, "loadFail")}</p>
+          <div className="stack"><div className="block">
+            <p className="lead" style={{ marginTop: 0 }}>{tr(lang, "loadFail")}</p>
             <button type="button" className="btn-main" style={{ marginTop: 14 }} onClick={() => void refresh()}>{tr(lang, "retry")}</button>
-          </div>
+          </div></div>
         )}
       </main>
-      <nav className="nav" aria-label="Main">
-        <div className="nav-in">
-          {TABS.map(({ path: p, key, icon: I }) => (
-            <a key={p} href={p} aria-current={tab === p ? "page" : undefined} onClick={(e) => { e.preventDefault(); go(p); }}>
-              <I size={24} strokeWidth={1.75} aria-hidden="true" />
-              <span>{tr(lang, key)}</span>
-            </a>
-          ))}
-        </div>
+      <nav className="dock frost" aria-label="Main">
+        {TABS.map(({ path: p, key, icon: I }) => (
+          <a key={p} {...link(p)} aria-current={tab === p ? "page" : undefined}>
+            {tab === p && <span className="dock-lens" aria-hidden="true" />}
+            <I size={23} strokeWidth={1.8} aria-hidden="true" />
+            <span>{tr(lang, key)}</span>
+          </a>
+        ))}
       </nav>
     </div>
   );

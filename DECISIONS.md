@@ -38,9 +38,20 @@ Small decisions made while building, newest last. Anything hard to undo was aske
 - **Room states**: assigned (building, room, floor, how to get in), not assigned yet, or cannot be shown right now. "How to get in" is chosen by building name (`fact.stay.enter.*`, admin-editable).
 - **Remembered until the day after departure** (cookie + the phone's storage). "Not you? Sign out" clears the session and everything saved on the phone.
 - **Rate limit**: 10 sign-in tries per 15 minutes per IP and per device.
-- **Wi-Fi second field** is the tour number followed by 000 (26/5253 gives 5253000). To be confirmed.
+- **Wi-Fi second field** is the tour number followed by 000 (26/5253 gives 5253000). Confirmed by the owner.
 - **The arch**: room up to and on arrival day; departure on the day before and the day of departure; otherwise the next ziyarat, which stays "next" until two hours after it gathers.
 - The `/api/content` feed is never cached by the browser, so signed-in content appears straight after sign-in.
 
 ## Deploying
 - Direct `wrangler deploy` from a Claude cloud session cannot upload the site files (the session's proxy replaces the upload token). So the repo is connected to **Cloudflare Workers Builds**: every push to `main` builds and deploys, as Mawaid-Scanner does. It reuses the existing "mawaid-scanner build token".
+
+## Redesign: liquid glass dashboard (owner's request)
+- Colours are unchanged. The page is warm paper with slow rose and gold light behind it; everything sits on panes of frosted glass.
+- **Aaj is a dashboard meant to fit one phone screen**: the arch, then tiles for now/next, the room (or sign-in), tonight's majlis, the menu, the four most-asked pages, the latest announcement and the WhatsApp community. Each tile opens a sheet with the full detail (the whole day, the full menu and its card, all announcements, the stay).
+- **Maloomat is a searchable grid of tiles** grouped by what a zair wants to do, instead of a long list.
+- **Finished ziyarat days shrink to one line**, so the next ziyarat leads the schedule.
+- The bottom bar is a floating glass dock; its lens glides to the chosen tab. Screens cross-fade with the browser's view transitions.
+- **Real backdrop blur is used only where content scrolls underneath** (top bar, dock, sheets, lightbox close). Tiles are lit glass without live blur, so mid-range phones stay smooth.
+- Every animation is switched off for people who ask their phone to reduce motion.
+- The language choice is a two-part switch in the top bar; "Not you? Sign out" stays one tap away under it.
+- Admin keeps its plain style (`src/admin.css`).

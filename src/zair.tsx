@@ -1,6 +1,6 @@
 import { useMemo, useState, type ReactNode } from "react";
 import qrcode from "qrcode-generator";
-import { MapPin } from "lucide-react";
+import { BedDouble, MapPin } from "lucide-react";
 import { nextUp, isOver, type Day } from "../shared/nextup";
 import { addDays, type KarbalaNow } from "../shared/time";
 import { assemblyFor } from "../shared/ziyarat";
@@ -9,7 +9,7 @@ import { go } from "./router";
 import { Community, assemblyTime, longDate, placeName } from "./screens";
 import { signIn, signOut, type Me, type RoomInfo } from "./session";
 import { byId, inGroup, isFallback, loc } from "./store";
-import { Body, CopyButton, Soon, T, Tab, type Ctx } from "./ui";
+import { Body, CopyButton, Sheet, Soon, T, Tab, type Ctx } from "./ui";
 
 const link = (path: string) => ({ href: path, onClick: (e: React.MouseEvent) => { e.preventDefault(); go(path); } });
 
@@ -19,7 +19,7 @@ export function SignInForm({ lang }: { lang: Lang }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   return (
-    <form className="signin" onSubmit={async (e) => {
+    <form className="signin pane" onSubmit={async (e) => {
       e.preventDefault();
       setBusy(true); setError("");
       const problem = await signIn(tour, its);
@@ -142,7 +142,6 @@ export function StayCard({ me, ctx }: { me: Me; ctx: Ctx }) {
   const { lang } = ctx;
   return (
     <>
-      <Tab>{tr2(lang, "stay")}</Tab>
       <RoomCard me={me} ctx={ctx} />
       <div className="facts">
         {me.stay.arrival && <div className="fact"><span className="fact-label">{tr2(lang, "arrival")}</span><span className="fact-value" dir="ltr">{longDate(me.stay.arrival)}</span></div>}
@@ -197,7 +196,7 @@ export function Schedule({ me, ctx, now }: { me: Me; ctx: Ctx; now: KarbalaNow }
           const place = a ? placeName(payload, a.place, lang) : null;
           const over = isOver(d, now, lateKnown);
           return (
-            <li key={`${d.date}${d.kind}`} className={`zday${over ? " over" : ""}${d === next ? " next" : ""}`}>
+            <li key={`${d.date}${d.kind}`} style={{ ["--i" as string]: days.indexOf(d) }} className={`zday pane${over ? " over" : ""}${d === next ? " next" : ""}`}>
               <div className="zday-date" dir="ltr" aria-label={longDate(d.date)}>
                 <span>{WD[date.getUTCDay()]}</span><strong>{date.getUTCDate()}</strong><span>{MO[date.getUTCMonth()]}</span>
               </div>
@@ -266,5 +265,32 @@ export function WifiSteps({ me, ctx }: { me: Me | null; ctx: Ctx }) {
         </div>
       </li>
     </ol>
+  );
+}
+
+/** Dashboard tile for the zair's own room; opens the stay details. */
+export function RoomTile({ me, ctx }: { me: Me; ctx: Ctx }) {
+  const { lang, payload } = ctx;
+  const [open, setOpen] = useState(false);
+  const room = me.room?.state === "assigned" ? currentRoom(me.room.rooms, payload.today) : null;
+  const state = room ? null : !me.verified ? (me.reason === "not_listed" ? loc(byId(payload, "fact.stay.notfaiz"), "value", lang) : tr2(lang, "roomUnavailable")) : tr2(lang, "roomAwaiting");
+  return (
+    <>
+      <button type="button" className="tile pane" onClick={() => setOpen(true)}>
+        <span className="tile-label"><BedDouble size={16} aria-hidden="true" />{tr2(lang, "yourRoom")}</span>
+        {room ? (
+          <>
+            <span className="tile-big" dir="ltr">{room.room}</span>
+            <span className="tile-sub" dir="ltr">{room.building}{room.floor ? `, ${tr2(lang, "floor").toLowerCase()} ${room.floor}` : ""}</span>
+          </>
+        ) : <span className="tile-sub" style={{ color: "var(--ink)" }}>{state}</span>}
+      </button>
+      {open && (
+        <Sheet title={tr2(lang, "stay")} onClose={() => setOpen(false)} lang={lang}>
+          <StayCard me={me} ctx={ctx} />
+          <a className="btn-main" style={{ marginTop: 14 }} {...link("/p/room")} onClick={(e) => { e.preventDefault(); setOpen(false); go("/p/room"); }}>{tr2(lang, "howToGetIn")}</a>
+        </Sheet>
+      )}
+    </>
   );
 }

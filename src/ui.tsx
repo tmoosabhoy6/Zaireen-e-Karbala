@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import {
   Accessibility, Banknote, BedDouble, BookOpen, Building2, Bus, Car, Check, ChevronLeft, ChevronRight, Clock, Copy, HandHeart,
   HeartPulse, IdCard, Info, Luggage, MapPin, MessageCircle, Phone, Plane, Search, Shirt, Sparkles, Utensils, Wifi, Wrench, X,
@@ -181,6 +182,33 @@ export function MenuCard({ ctx }: { ctx: Ctx }) {
   );
 }
 
+/** A pane that rises over the dashboard with the details behind a tile. */
+export function Sheet({ title, onClose, lang, children }: { title: string; onClose: () => void; lang: Lang; children: ReactNode }) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    document.addEventListener("keydown", onKey);
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = "";
+    };
+  }, [onClose]);
+  return createPortal(
+    <div className="sheet-wrap" role="dialog" aria-modal="true" aria-label={title}>
+      <div className="sheet-back" onClick={onClose} />
+      <div className="sheet frost">
+        <div className="sheet-grip" aria-hidden="true" />
+        <div className="sheet-head">
+          <h2>{title}</h2>
+          <button type="button" className="sheet-close" onClick={onClose} aria-label={tr(lang, "close")}><X size={22} aria-hidden="true" /></button>
+        </div>
+        {children}
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
 /** Full-screen picture. The page's own pinch-zoom is used, so nothing is cropped or re-drawn. */
 export function Lightbox({ src, alt, onClose, lang }: { src: string; alt: string; onClose: () => void; lang: Lang }) {
   const [big, setBig] = useState(false);
@@ -193,13 +221,14 @@ export function Lightbox({ src, alt, onClose, lang }: { src: string; alt: string
       document.body.style.overflow = "";
     };
   }, [onClose]);
-  return (
+  return createPortal(
     <div className="lightbox" role="dialog" aria-modal="true" aria-label={alt}>
-      <button type="button" className="lightbox-close" onClick={onClose} aria-label={tr(lang, "close")}><X size={26} aria-hidden="true" /></button>
+      <button type="button" className="lightbox-close frost" onClick={onClose} aria-label={tr(lang, "close")}><X size={26} aria-hidden="true" /></button>
       <div className="lightbox-scroll" onClick={() => setBig((b) => !b)}>
         <img src={src} alt={alt} className={big ? "big" : ""} />
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 

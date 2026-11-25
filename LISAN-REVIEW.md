@@ -258,6 +258,12 @@ These are in the code (`src/i18n.ts`), not in admin, and are live now in Lisan u
 | wifiQr | Or let someone scan this with their phone camera to join. | يا كوئي بيجا نا phone نا camera سي اْ scan كري نے join كرو. |
 | wifiNeedsIts | Wi-Fi details are shown once your ITS is matched to your tour. | تمارو ITS تمارا tour ساتهے ملي جائي بعد Wi-Fi ني تفصيل بتاوا ما اْوسے. |
 | signedInAs | Signed in | Signed in |
+| then | Then | پچهي |
+| moreItems | more | مزيد |
+| searchInfo | Search information | معلومات ما تلاش كرو |
+| noResults | Nothing matches. Try another word. | كوئي چيز نتهي ملي. بيجو لفظ لكهو. |
+| signInTile | Your room and ziyarat | تمارو Room انے زيارة |
+| allDay | The whole day | اْكهو دن |
 
 ## Points I was unsure of
 

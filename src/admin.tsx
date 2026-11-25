@@ -1,3 +1,4 @@
+import "./admin.css";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { addDays, karbalaNow, weekdayOf } from "../shared/time";
 import { majlisDefault, PLACES } from "../shared/ziyarat";
