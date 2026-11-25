@@ -68,3 +68,29 @@ describe("ziyarat rules carried over from zt", () => {
     expect(isIts("1234567")).toBe(false);
   });
 });
+
+import { nextUp, isOver } from "../shared/nextup";
+describe("the next-up arch", () => {
+  const days = [
+    { date: "2026-11-27", kind: "pehli" as const, name: "Pehli Ziyarat" },
+    { date: "2026-11-28", kind: "atraaf" as const, name: "A" },
+    { date: "2026-11-30", kind: "wada" as const, name: "Wada Ziyarat" },
+  ];
+  const stay = { arrival: "2026-11-27", departure: "2026-12-01" };
+  const at = (date: string, minutes: number) => ({ date, weekday: 0, minutes });
+  it("shows the room up to and on arrival day", () => {
+    expect(nextUp(stay, days, at("2026-11-26", 600), true).type).toBe("arrival");
+    expect(nextUp(stay, days, at("2026-11-27", 600), true)).toEqual({ type: "arrival", ziyaratToday: days[0] });
+  });
+  it("shows the next ziyarat during the stay, until two hours after it gathers", () => {
+    expect(nextUp(stay, days, at("2026-11-28", 7 * 60), true)).toEqual({ type: "ziyarat", day: days[1] });
+    expect(isOver(days[1], at("2026-11-28", 10 * 60 + 14), true)).toBe(false);
+    expect(isOver(days[1], at("2026-11-28", 10 * 60 + 16), true)).toBe(true);
+    expect(nextUp(stay, days, at("2026-11-28", 12 * 60), true)).toEqual({ type: "ziyarat", day: days[2] });
+  });
+  it("shows the departure the day before and on the day", () => {
+    expect(nextUp(stay, days, at("2026-11-30", 600), true).type).toBe("departure");
+    expect(nextUp(stay, days, at("2026-12-01", 300), true).type).toBe("departure");
+    expect(nextUp(stay, days, at("2026-12-02", 300), true).type).toBe("stay");
+  });
+});

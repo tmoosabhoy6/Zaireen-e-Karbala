@@ -116,12 +116,13 @@ export function Community({ ctx }: { ctx: Ctx }) {
   );
 }
 
-export function Aaj({ ctx, arch }: { ctx: Ctx; arch: ReactNode }) {
+export function Aaj({ ctx, arch, after }: { ctx: Ctx; arch: ReactNode; after?: ReactNode }) {
   const { lang, payload } = ctx;
   const tiles = payload.items.filter((i) => i.kind === "page" && i.data.tile).sort((a, b) => Number(a.data.tile) - Number(b.data.tile));
   return (
     <>
       <Arch>{arch}</Arch>
+      {after}
 
       <Tab>{tr(lang, "todayTimes")}</Tab>
       <p className="date-line" dir="ltr">{longDate(payload.today)}{payload.menu?.hijri ? ` / ${payload.menu.hijri}` : ""}</p>

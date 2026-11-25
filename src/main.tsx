@@ -1,4 +1,4 @@
-import { StrictMode, Suspense, lazy } from "react";
+import { StrictMode, Suspense, lazy, useEffect } from "react";
 import { createRoot } from "react-dom/client";
 import { CalendarDays, Info, LifeBuoy, Sun } from "lucide-react";
 import "./styles.css";
@@ -7,6 +7,8 @@ import { go, usePath } from "./router";
 import { Aaj, LostPerson, MadadContacts, Maloomat, PageView, Community, useKarbalaClock } from "./screens";
 import { inGroup, refresh, setLang, useLiveContent, useStore } from "./store";
 import { PageLink, Tab, type Ctx } from "./ui";
+import { loadMe, useMe } from "./session";
+import { ArchForMe, Schedule, SignInForm, SignedInBar, StayCard, WifiSteps } from "./zair";
 
 /** Not linked from anywhere in the app. */
 export const ADMIN_PATH = "/daftar";
@@ -32,25 +34,38 @@ function App() {
   const { lang, payload, stale, failed } = useStore();
   const now = useKarbalaClock();
   useLiveContent();
+  const me = useMe();
+  useEffect(() => {
+    void loadMe();
+    const again = () => document.visibilityState === "visible" && void loadMe();
+    document.addEventListener("visibilitychange", again);
+    return () => document.removeEventListener("visibilitychange", again);
+  }, []);
 
   if (path.startsWith(ADMIN_PATH)) return <Suspense fallback={null}><Admin /></Suspense>;
 
-  const tab = path.startsWith("/p/") ? "/maloomat" : TABS.some((t) => t.path === path) ? path : "/";
+  const tab = path.startsWith("/p/") ? "/maloomat" : TABS.some((t) => t.path === path) ? path : path === "/signin" ? "" : "/";
   const home = path === "/";
   const ctx: Ctx | null = payload ? { lang, payload, minutes: now.minutes } : null;
 
   let screen = null;
   if (ctx) {
     if (path.startsWith("/p/")) {
-      screen = <PageView id={path.slice(3)} ctx={ctx} wifi={<p className="lead">{tr(lang, "wifiSignIn")}</p>} />;
+      screen = <PageView id={path.slice(3)} ctx={ctx} wifi={<WifiSteps me={me} ctx={ctx} />} />;
+    } else if (path === "/signin") {
+      screen = <SignInForm lang={lang} />;
     } else if (tab === "/ziyarat") {
       screen = (
         <>
-          <p className="lead">{tr(lang, "ziyaratLead")}</p>
+          {me ? <Schedule me={me} ctx={ctx} now={now} /> : (
+            <>
+              <p className="lead">{tr(lang, "ziyaratLead")}</p>
+              <a className="btn-main" style={{ marginTop: 14 }} href="/signin" onClick={(e) => { e.preventDefault(); go("/signin"); }}>{tr(lang, "signIn")}</a>
+            </>
+          )}
           <Tab>{tr(lang, "secZiyarat")}</Tab>
           <div className="rows">{inGroup(ctx.payload, "page", "ziyarat").map((p) => <PageLink key={p.id} item={p} lang={lang} />)}</div>
-          <Tab>{tr(lang, "announcements")}</Tab>
-          <Community ctx={ctx} />
+          {!me && <><Tab>{tr(lang, "announcements")}</Tab><Community ctx={ctx} /></>}
         </>
       );
     } else if (tab === "/madad") {
@@ -65,12 +80,13 @@ function App() {
       screen = <Maloomat ctx={ctx} />;
     } else {
       screen = (
-        <Aaj ctx={ctx} arch={
+        <Aaj ctx={ctx} after={me ? <StayCard me={me} ctx={ctx} /> : null} arch={me ? <ArchForMe me={me} ctx={ctx} now={now} /> : (
           <>
             <h1 className="arch-title">{tr(lang, "appName")}</h1>
-            <p className="arch-detail">{tr(lang, "signInSoon")}</p>
+            <p className="arch-detail">{tr(lang, "signInLead")}</p>
+            <div className="arch-actions"><a className="btn-cream" href="/signin" onClick={(e) => { e.preventDefault(); go("/signin"); }}>{tr(lang, "signIn")}</a></div>
           </>
-        } />
+        )} />
       );
     }
   }
@@ -84,6 +100,7 @@ function App() {
         </div>
         <img className="calligraphy" src="/brand/karbala-mualla.svg" alt="كربلاء المعلى" width="600" height="304" />
       </header>
+      {me && <SignedInBar me={me} lang={lang} />}
       {stale && <p className="notice">{tr(lang, "offline")}</p>}
       <main>
         {screen}

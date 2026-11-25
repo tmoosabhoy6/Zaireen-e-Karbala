@@ -291,3 +291,47 @@ html[data-lang="lud"] .nav a { font-size: 15px; }
 .adm-login { max-width: 380px; padding-top: 12vh; }
 .adm-login form { display: grid; gap: 14px; margin-top: 18px; }
 @media (max-width: 640px) { .adm-pair { grid-template-columns: 1fr; } .adm-new { flex-direction: column; align-items: stretch; } }
+
+/* ---- Signed-in screens ---- */
+.who { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 0 calc(var(--gutter) * -1); padding: 6px var(--gutter); background: var(--wash); font-size: 15px; font-weight: 500; color: var(--maroon-deep); }
+.who-out { text-decoration: underline; min-height: 36px; color: var(--maroon); font-size: 15px; }
+.signin { display: grid; gap: 16px; padding-top: 20px; }
+.field { display: grid; gap: 4px; font-weight: 500; }
+.field input { font: inherit; font-size: 22px; letter-spacing: 0.04em; padding: 12px 14px; border: 2px solid #c9b3ae; border-radius: 12px; background: #fff; color: var(--ink); width: 100%; font-family: "Readex Pro Variable", sans-serif; }
+.field input:focus { border-color: var(--maroon); outline: none; box-shadow: 0 0 0 3px var(--gold-soft); }
+.field small { color: var(--ink-2); font-weight: 400; font-size: 15px; }
+.form-error { color: var(--red); font-weight: 500; padding: 10px 14px; border: 1.5px solid var(--red); border-radius: 10px; background: #fff; font-family: "Readex Pro Variable", sans-serif; }
+.room-big { font-size: 34px; font-weight: 600; color: var(--maroon-deep); line-height: 1.2; }
+.room-detail { font-size: 17px; margin-top: 2px; }
+[dir="rtl"] .room-big, [dir="rtl"] .room-detail[dir="ltr"] { text-align: right; }
+
+.zdays { display: grid; gap: 10px; }
+.zday { display: grid; grid-template-columns: 62px 1fr; gap: 12px; padding: 12px; border: 1.5px solid var(--line); border-radius: 12px; background: #fff; }
+.zday.next { border-color: var(--maroon); box-shadow: inset 4px 0 0 var(--maroon); }
+[dir="rtl"] .zday.next { box-shadow: inset -4px 0 0 var(--maroon); }
+.zday.over { background: transparent; color: var(--ink-2); }
+.zday-date { display: grid; justify-items: center; align-content: start; font-size: 12.5px; font-weight: 600; color: var(--maroon); line-height: 1.2; font-family: "Readex Pro Variable", sans-serif; }
+.zday-date strong { font-size: 28px; line-height: 1.1; color: var(--maroon-deep); }
+.zday.over .zday-date, .zday.over .zday-date strong { color: var(--ink-2); }
+.zday-main summary { display: grid; gap: 2px; cursor: pointer; list-style: none; }
+.zday-main summary::-webkit-details-marker { display: none; }
+.zday-name { font-weight: 600; font-size: 17.5px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; text-align: left; }
+[dir="rtl"] .zday-name { justify-content: flex-end; }
+.zday-time { font-size: 22px; font-weight: 600; color: var(--maroon-deep); font-variant-numeric: tabular-nums; }
+.zday.over .zday-time { color: inherit; font-size: 17px; font-weight: 500; }
+.zday-place { display: flex; align-items: center; gap: 5px; font-size: 16px; }
+.zday-main > .btn-quiet { margin-top: 8px; }
+.zday-more { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); display: grid; gap: 8px; }
+.zday-more h4 { font-size: 15px; color: var(--ink-2); font-weight: 500; }
+.zday-links { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.wifi { display: grid; gap: 22px; margin-top: 8px; }
+.wifi > li { display: grid; grid-template-columns: 34px 1fr; gap: 12px; }
+.wifi > li > div { display: grid; gap: 10px; min-width: 0; }
+.wifi-value { display: grid; gap: 2px; padding: 10px 12px; border: 1.5px solid var(--line); border-radius: 12px; background: #fff; }
+.wifi-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.wifi-code { font-family: "Readex Pro Variable", ui-monospace, monospace; font-size: 24px; font-weight: 600; letter-spacing: 0.05em; color: var(--maroon-deep); word-break: break-all; }
+.qr { width: 190px; max-width: 100%; background: #fff; border: 1.5px solid var(--line); border-radius: 12px; }
+.qr svg { display: block; width: 100%; height: auto; }
+.arch-big.worded { font-size: 25px; line-height: 1.3; }
+.zday-time:not(:has(*)) { text-wrap: balance; }

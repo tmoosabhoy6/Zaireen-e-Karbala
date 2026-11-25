@@ -2,7 +2,7 @@
 // Run: node --experimental-strip-types scripts/lisan-review.mjs
 import { writeFileSync } from "node:fs";
 import { SEED } from "../worker/seed.ts";
-import { STRINGS } from "../src/i18n.ts";
+import { STRINGS, STRINGS2 } from "../src/i18n.ts";
 
 const cell = (s) => String(s ?? "").replace(/\n/g, "<br>").replace(/\|/g, "\\|");
 let out = `# Lisan ud-Dawat review
@@ -27,7 +27,7 @@ out += `\n## 2. Written by Claude from the English (needs your proofread)\n\n| W
 for (const s of rows.filter((s) => !s.data?.source)) for (const [f, v] of Object.entries(s.lud)) if (v?.trim()) out += `| \`${s.id}\` ${f} | ${cell(s.en?.[f])} | ${cell(v)} |\n`;
 
 out += `\n## 3. Words of the app itself (buttons, tab names)\n\nThese are in the code (\`src/i18n.ts\`), not in admin, and are live now in Lisan ud-Dawat mode. Tell me any corrections.\n\n| Key | English | Lisan ud-Dawat |\n|---|---|---|\n`;
-for (const [k, [en, lud]] of Object.entries(STRINGS)) out += `| ${k} | ${cell(en)} | ${cell(lud)} |\n`;
+for (const [k, [en, lud]] of [...Object.entries(STRINGS), ...Object.entries(STRINGS2)]) out += `| ${k} | ${cell(en)} | ${cell(lud)} |\n`;
 
 out += `
 ## Points I was unsure of

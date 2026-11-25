@@ -22,3 +22,7 @@ This file is the same list at the time of the last build, plus questions for you
 - **Buildings**: Karbala-Accommodation-Dashboard names only Amatullah and Qasr. Is Amatullah the one inside Faiz, and are there others?
 - **Lost and Found office hours**: the default office hours are shown. Correct them in admin if it has its own.
 - **Maghrib Isha ni namaz** shows "As per ITS" and sits in the day list at 7:00 pm for ordering only.
+- **Zaereen not staying in Faiz**: NKERP gives me no validated way to confirm their ITS on a tour, so they get the schedule and dates but not Wi-Fi. Is there an NKERP read that lists every ITS on a tour, or should Wi-Fi open to anyone who signs in with a valid tour ID?
+- **Rooms missing in NKERP**: of four current tours I checked, three had no Karbala room entered in NKERP yet (their people show "Your room has not been assigned yet"). If rooms are kept in the "Krb Accomodation" Sheet first, tell me and I will read that instead or as well.
+- **Arrival and departure times and ports** from NKERP (for example "Baghdad Airport", 04:20): should the departure card show them, and is the NKERP departure time the time to leave Karbala or the flight time?
+- **"What it is"** for each of the four ziyarat: nothing confirmed yet, so nothing is shown (listed under Still missing).

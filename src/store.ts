@@ -62,7 +62,7 @@ let inflight: Promise<void> | null = null;
 export function refresh(): Promise<void> {
   inflight ??= (async () => {
     try {
-      const res = await fetch("/api/content", { credentials: "same-origin" });
+      const res = await fetch("/api/content", { credentials: "same-origin", cache: "no-store" });
       if (!res.ok) throw new Error(String(res.status));
       const payload = (await res.json()) as Payload;
       write(CACHE_KEY, payload);

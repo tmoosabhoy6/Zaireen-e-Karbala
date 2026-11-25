@@ -8,7 +8,7 @@
  * - Lisan ud-Dawat text starts unapproved (awaiting proofread) and is shown only after approval.
  * - No credentials and no personal data here: the Wi-Fi password is entered in admin, not in code.
  */
-export const SEED_REV = 1;
+export const SEED_REV = 2;
 
 type Loc = Record<string, string>;
 export interface SeedItem {
@@ -55,6 +55,14 @@ fact("hours.default", "hours", { label: "Office hours when an office has none of
 fact("stay.checkin", "stay", { label: "Check-in", value: "Whenever you arrive" }, { label: "Check-in", value: "جيوارے بهي تميں پهونچو" });
 fact("stay.checkout", "stay", { label: "Checkout", value: "8:00 am" }, { label: "Checkout", value: "8:00 am" });
 fact("stay.notfaiz", "stay", { label: "Shown instead of a room", value: "You are not staying in Faiz accommodation." }, { label: "", value: "تميں فيض ني accommodation ما ٹهرا نتهي." });
+
+// How to get into the room, chosen by building: data.match is looked for in the building's name.
+fact("stay.enter.faiz", "stay", { label: "Getting in: buildings inside Faiz", value: "Walk in. Your room is unlocked." }, { label: "", value: "سيدها اندر جاؤ، Room كهلو چهے." });
+fact("stay.enter.qasr", "stay", { label: "Getting in: Qasr building", value: "Collect your key at the Qasr building's reception desk." }, { label: "", value: "Qasr building نا reception desk سي چابي لئي لو." }, { match: "qasr" });
+todo("about.pehli", "ziyarat-about", "What Pehli Ziyarat is");
+todo("about.atraaf", "ziyarat-about", "What Karbala Mualla Atraaf - Atabaat Aaliyah is");
+todo("about.baghdad", "ziyarat-about", "What Baghdad Atabaat Aaliyah is");
+todo("about.wada", "ziyarat-about", "What Wada Ziyarat is");
 
 // Assembly points for the ziyarat rules (shared/ziyarat.ts). data.v is the map link.
 fact("place.najmi", "place", { label: "Najmi Masjid" }, { label: "نجمي مسجد" }, { v: "" });

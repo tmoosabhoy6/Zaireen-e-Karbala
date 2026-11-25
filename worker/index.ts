@@ -1,4 +1,5 @@
 import { ensureSeed, publicPayload, type ContentRow } from "./content";
+import { me, signIn, signOut } from "./zair";
 import {
   HttpError, attemptsLeft, clearAttempts, countAttempt, createSession, dropSession, fail, ipOf, json, logAdmin, newId, nowIso,
   readJson, readSession, sameSecret, setCookie, type Env,
@@ -12,7 +13,7 @@ const MAX_FILE = 40_000_000;
 const KINDS = ["page", "block", "office", "fact", "faq", "request_type", "feedback_q"];
 const FILE_TYPES = /^(image\/(jpeg|png|webp|gif)|application\/pdf|video\/mp4)$/;
 
-type Handler = (ctx: { request: Request; env: Env; url: URL; params: string[] }) => Promise<Response>;
+type Handler = (ctx: { request: Request; env: Env; url: URL; params: string[]; ctx: ExecutionContext }) => Promise<Response>;
 const routes: { method: string; pattern: RegExp; admin?: boolean; run: Handler }[] = [];
 const route = (method: string, path: string, run: Handler, admin = false) =>
   routes.push({ method, pattern: new RegExp(`^${path.replace(/:[a-z]+/g, "([^/]+)")}$`), admin, run });
@@ -28,8 +29,12 @@ const lines = (v: unknown) => (Array.isArray(v) ? v.map((x) => text(x, 200).trim
 route("GET", "/api/content", async ({ env, request }) => {
   const zair = await readSession(env, request, "zair");
   const body = await publicPayload(env, !!(zair && (zair as { verified?: boolean }).verified));
-  return json(body, 200, { "Cache-Control": "private, max-age=30" });
+  return json(body);
 });
+
+route("POST", "/api/signin", ({ request, env, ctx }) => signIn(request, env, ctx));
+route("POST", "/api/signout", ({ request, env }) => signOut(request, env));
+route("GET", "/api/me", ({ request, env, ctx }) => me(request, env, ctx));
 
 route("GET", "/api/file/:id", async ({ env, params }) => {
   const file = await env.DB.prepare("SELECT * FROM files WHERE id=?").bind(params[0]).first<{ id: string; name: string; mime: string; size: number }>();
@@ -207,7 +212,7 @@ route("GET", "/api/admin/log", async ({ env }) => {
 
 // ---------------------------------------------------------------------------
 
-async function handle(request: Request, env: Env): Promise<Response> {
+async function handle(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
   const url = new URL(request.url);
   if (!url.pathname.startsWith("/api/")) return env.ASSETS.fetch(request);
   if (request.method !== "GET") {
@@ -221,15 +226,15 @@ async function handle(request: Request, env: Env): Promise<Response> {
     const m = r.pattern.exec(url.pathname);
     if (!m) continue;
     if (r.admin && !(await readSession(env, request, "admin"))) fail(401, "Sign in to admin first.", "signed_out");
-    return r.run({ request, env, url, params: m.slice(1) });
+    return r.run({ request, env, url, params: m.slice(1), ctx });
   }
   return fail(404, "Not found.");
 }
 
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
+  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     try {
-      return await handle(request, env);
+      return await handle(request, env, ctx);
     } catch (err) {
       if (err instanceof HttpError) return json({ error: err.message, code: err.code }, err.status);
       // Never log request bodies or URLs with personal data: only the error's own message.

@@ -28,3 +28,19 @@ Small decisions made while building, newest last. Anything hard to undo was aske
 - Session cookies hold a random token; the database holds only its hash. Attempt counters are keyed hashes, never an IP or ITS.
 - Worker logs carry no request bodies and no URLs with personal data; sign-in data travels in POST bodies only.
 - Admin PIN: 5 wrong tries locks that IP for 15 minutes; the session lasts 30 days; every change is logged with its time.
+
+## Sign-in, schedule and rooms
+- **The schedule comes from the Sheet through zt's public Apps Script feed** (`?snapshot=1`), read-only. The Worker keeps the latest snapshot in D1 (without group or leader names) and refreshes it when older than five minutes.
+- **Four digits only (5253)**: the tour of that number whose Karbala days cover today wins, otherwise the nearest one.
+- **NKERP is read through a strict allowlist** (`worker/nkerp.ts`): login, role select, the "who is where" room search, the unallocated list and the four Karbala visit lists. Anything else throws before a request is made. A test checks that every known write path is refused.
+- **An ITS is "verified" when NKERP lists it on that tour** in the room search or the unallocated list (Karbala). Only then are the room and Wi-Fi shown.
+- **Not listed or NKERP unreachable: tour-level sign-in** (schedule and stay dates only). A tour ID can be guessed, so nothing personal is shown.
+- **Room states**: assigned (building, room, floor, how to get in), not assigned yet, or cannot be shown right now. "How to get in" is chosen by building name (`fact.stay.enter.*`, admin-editable).
+- **Remembered until the day after departure** (cookie + the phone's storage). "Not you? Sign out" clears the session and everything saved on the phone.
+- **Rate limit**: 10 sign-in tries per 15 minutes per IP and per device.
+- **Wi-Fi second field** is the tour number followed by 000 (26/5253 gives 5253000). To be confirmed.
+- **The arch**: room up to and on arrival day; departure on the day before and the day of departure; otherwise the next ziyarat, which stays "next" until two hours after it gathers.
+- The `/api/content` feed is never cached by the browser, so signed-in content appears straight after sign-in.
+
+## Deploying
+- Direct `wrangler deploy` from a Claude cloud session cannot upload the site files (the session's proxy replaces the upload token). So the repo is connected to **Cloudflare Workers Builds**: every push to `main` builds and deploys, as Mawaid-Scanner does. It reuses the existing "mawaid-scanner build token".

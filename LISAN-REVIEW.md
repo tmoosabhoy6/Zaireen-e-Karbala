@@ -44,6 +44,8 @@ Things I was unsure of are listed at the end.
 | `fact.stay.checkout` label | Checkout | Checkout |
 | `fact.stay.checkout` value | 8:00 am | 8:00 am |
 | `fact.stay.notfaiz` value | You are not staying in Faiz accommodation. | تميں فيض ني accommodation ما ٹهرا نتهي. |
+| `fact.stay.enter.faiz` value | Walk in. Your room is unlocked. | سيدها اندر جاؤ، Room كهلو چهے. |
+| `fact.stay.enter.qasr` value | Collect your key at the Qasr building's reception desk. | Qasr building نا reception desk سي چابي لئي لو. |
 | `fact.place.najmi` label | Najmi Masjid | نجمي مسجد |
 | `fact.place.haram6` label | Imam Husain AS Haram Mubarak, gate number 6 | امام حسين ع م نا حرم مبارك، gate نمبر 6 |
 | `fact.place.emarah` label | Al Imara hotel | Al Imara hotel |
@@ -222,6 +224,40 @@ These are in the code (`src/i18n.ts`), not in admin, and are live now in Lisan u
 | loadFail | This could not be loaded. Check your connection. | اْ load نھ تهئي سكو. اپنو connection ديكهو. |
 | close | Close | بند كرو |
 | wifiSignIn | Sign in to see the Wi-Fi steps with your own details filled in. | اپني تفصيل ساتهے Wi-Fi نا steps ديكهوا واسطے sign in كرو. |
+| signInTitle | Sign in | Sign in |
+| tourIdHint | Like 26/5253, or just 5253 | جيم كھ 26/5253، يا فقط 5253 |
+| itsHint | Your 8-digit ITS number | اپنو 8 digit نو ITS نمبر |
+| signingIn | Checking… | ديكهي رهيا چهے… |
+| signInHelp | If you don't know your tour ID, ask your group leader or check your email. | اگر tour ID معلوم نھ هوئي تو اپنا group leader نے پوچهو يا اپنو email ديكهو. |
+| tour | Tour | Tour |
+| yourRoom | Your room | تمارو Room |
+| room | Room | Room |
+| floor | Floor | Floor |
+| roomAwaiting | Your room has not been assigned yet. | تمارو Room هجي assign نتهي تهيو. |
+| roomUnavailable | Your room cannot be shown right now. Please check again shortly. | تمارو Room هوے بتاوي نتهي سكاتو. تهوڑي وار ما پهري ديكهو. |
+| roomNotListed | We could not find this ITS on this tour's Faiz accommodation list. | اْ ITS اْ tour ني فيض accommodation ني list ما نتهي ملو. |
+| howToGetIn | How to get into your room | Room ما كيم جاوو |
+| nextZiyarat | Your next ziyarat | تماري اْگلي زيارة |
+| today | Today | اْج |
+| tomorrow | Tomorrow | كال |
+| arrivalDay | Welcome to Karbala Mualla | كربلاء معلى ما خوش اْمديد |
+| departure | Your departure | تماري روانگي |
+| departureSteps | Departure steps | روانگي نا steps |
+| arrival | Arrival | اْمد |
+| stay | Your stay in Karbala | كربلاء ما تمارو قيام |
+| schedule | Your ziyarat schedule | تمارو زيارة schedule |
+| noSchedule | Your tour's ziyarat schedule is not available yet. | تمارا tour نو زيارة schedule هجي نتهي اْيو. |
+| done | Done | تهئي گئي |
+| whatToBring | What to bring and dress | سوں لاوو انے لباس |
+| wheelchairFor | Request a wheelchair for this ziyarat | اْ زيارة واسطے wheelchair ني request كرو |
+| scheduleChanges | Timings and venues can change at short notice. Join the WhatsApp community for updates. | وقت انے جگھ ما تبديلي تهئي سكے چهے. خبر واسطے WhatsApp community join كرو. |
+| wifiNetwork | Network name | Network نو نام |
+| wifiPassword | Password | Password |
+| wifiFirst | First field: your ITS number | پظظلو خانه: اپنو ITS نمبر |
+| wifiSecond | Second field: your tour ID followed by 000 | بيجو خانه: اپني tour ID انے 000 |
+| wifiQr | Or let someone scan this with their phone camera to join. | يا كوئي بيجا نا phone نا camera سي اْ scan كري نے join كرو. |
+| wifiNeedsIts | Wi-Fi details are shown once your ITS is matched to your tour. | تمارو ITS تمارا tour ساتهے ملي جائي بعد Wi-Fi ني تفصيل بتاوا ما اْوسے. |
+| signedInAs | Signed in | Signed in |
 
 ## Points I was unsure of
 
