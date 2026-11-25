@@ -1,0 +1,13 @@
+{
+  "name": "Zaireen-e-Karbala",
+  "short_name": "Zaireen",
+  "description": "For zaereen staying with Faiz-e-Husaini in Karbala Mualla",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FFF9F5",
+  "theme_color": "#7A1F14",
+  "icons": [
+    { "src": "/brand/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/brand/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
