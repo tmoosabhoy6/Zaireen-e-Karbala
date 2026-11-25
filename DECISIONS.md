@@ -66,3 +66,7 @@ Ideas only: every effect is written for this app in plain CSS and a few lines of
 - **Bento stagger and spring motion** (after the glass dashboard templates built with Framer Motion): tiles rise in one after another; spring curves are done with CSS `linear()`.
 - Also: a live countdown to the next namaz or meal, the tapped tile's icon morphing into the page title, a moving sheen on the dock's lens, fine grain over the background, and scroll-linked depth on the top bar and arch.
 - Tilt uses the phone's orientation only where the browser gives it without a permission prompt (Android). iPhones would need to ask the zair, so it is skipped there.
+
+## Dock response
+- **Tab switches no longer take a whole-page snapshot.** The view transition made the dock's highlight wait for the browser to capture the page. The lens is now one element that slides with a spring the moment a tab is touched, before the screen changes. Cross-fade and the icon morph remain only for opening and leaving an info page.
+- **The lens is clear glass** (light pooling at the top, a warm caustic along the bottom, a bright rim, a glint and a slow sheen) and stretches as it sets off. It has no backdrop blur of its own, because blur nested inside the dock's blur is slow on phones.

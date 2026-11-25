@@ -1,4 +1,4 @@
-import { StrictMode, Suspense, lazy, useEffect } from "react";
+import { StrictMode, Suspense, lazy, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { CalendarDays, Info, LifeBuoy, Sun } from "lucide-react";
 import "./styles.css";
@@ -22,6 +22,30 @@ const TABS: { path: string; key: Key; icon: typeof Sun }[] = [
 ];
 
 const link = (path: string) => ({ href: path, onClick: (e: React.MouseEvent) => { e.preventDefault(); go(path); } });
+
+/**
+ * The floating dock. Its lens is one piece of glass that slides to a tab the moment the tab is touched,
+ * without waiting for the screen underneath to change.
+ */
+function Dock({ tab, lang }: { tab: string; lang: Lang }) {
+  const current = TABS.findIndex((t) => t.path === tab);
+  const [touched, setTouched] = useState<number | null>(null);
+  useEffect(() => setTouched(null), [tab]);
+  const at = touched ?? current;
+  return (
+    <nav className="dock frost" aria-label="Main" style={{ ["--i" as string]: Math.max(at, 0) }}>
+      <span className={`dock-lens${at < 0 ? " off" : ""}`} aria-hidden="true"><i key={at} /></span>
+      {TABS.map(({ path: p, key, icon: I }, i) => (
+        <a key={p} href={p} aria-current={tab === p ? "page" : undefined} data-on={at === i ? "" : undefined}
+          onPointerDown={() => setTouched(i)} onPointerLeave={() => setTouched(null)} onPointerCancel={() => setTouched(null)}
+          onClick={(e) => { e.preventDefault(); if (tab !== p) navigator.vibrate?.(6); go(p); }}>
+          <I size={23} strokeWidth={1.8} aria-hidden="true" />
+          <span>{tr(lang, key)}</span>
+        </a>
+      ))}
+    </nav>
+  );
+}
 
 function LangSwitch({ lang }: { lang: Lang }) {
   return (
@@ -147,7 +171,7 @@ function App() {
       </header>
       {stale && <p className="notice">{tr(lang, "offline")}</p>}
       <main>
-        {screen}
+        <div className="view" key={path}>{screen}</div>
         {!ctx && !failed && <div className="grid"><div className="skeleton wide" style={{ minHeight: 190 }} /><div className="skeleton" /><div className="skeleton" /><div className="skeleton wide" /></div>}
         {failed && (
           <div className="stack"><div className="block">
@@ -156,15 +180,7 @@ function App() {
           </div></div>
         )}
       </main>
-      <nav className="dock frost" aria-label="Main">
-        {TABS.map(({ path: p, key, icon: I }) => (
-          <a key={p} href={p} aria-current={tab === p ? "page" : undefined} onClick={(e) => { e.preventDefault(); if (tab !== p) navigator.vibrate?.(6); go(p); }}>
-            {tab === p && <span className="dock-lens" aria-hidden="true" />}
-            <I size={23} strokeWidth={1.8} aria-hidden="true" />
-            <span>{tr(lang, key)}</span>
-          </a>
-        ))}
-      </nav>
+      <Dock tab={tab} lang={lang} />
     </div>
   );
 }

@@ -11,15 +11,30 @@ function transition(change: () => void) {
   start.call(document, () => flushSync(change));
 }
 
-window.addEventListener("popstate", () => transition(notify));
+const isPage = (path: string) => path.startsWith("/p/");
+let last = location.pathname;
 
+window.addEventListener("popstate", () => {
+  const morph = isPage(last) || isPage(location.pathname);
+  last = location.pathname;
+  if (morph) transition(notify);
+  else notify();
+});
+
+/**
+ * Moves to another screen. Switching tabs is instant (a whole-page snapshot made the dock feel late);
+ * the cross-fade and icon morph are kept for opening and leaving an info page.
+ */
 export function go(path: string) {
   if (path === location.pathname) return;
-  transition(() => {
+  const change = () => {
     history.pushState(null, "", path);
+    last = path;
     notify();
     window.scrollTo(0, 0);
-  });
+  };
+  if (isPage(path) || isPage(location.pathname)) transition(change);
+  else change();
 }
 
 export function back(fallback: string) {

@@ -100,10 +100,7 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 html[data-lang="lud"] .dock a { font-size: 14px; line-height: 1.4; }
 .dock a:active { transform: scale(0.92); }
 .dock a > * { position: relative; }
-.dock a[aria-current="page"] { color: var(--cream); font-weight: 600; }
-.dock-lens { position: absolute !important; inset: 0; border-radius: 999px; background: linear-gradient(160deg, #8f2a1c, var(--maroon-deep)); box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.35), inset 0 -6px 12px rgb(0 0 0 / 0.18), 0 6px 14px -6px rgb(90 20 11 / 0.6); view-transition-name: dock-lens; }
 .dock svg { transition: transform 0.35s var(--spring); }
-.dock a[aria-current="page"] svg { transform: translateY(-1px) scale(1.06); }
 
 /* ---- The arch: the one thing that matters most right now ---- */
 .arch { margin-top: 12px; color: var(--cream); filter: drop-shadow(0 18px 22px rgb(90 20 11 / 0.28)); }
@@ -350,7 +347,6 @@ html[data-lang="lud"] .bullets li::before { top: 0.85em; }
 ::view-transition-new(root) { animation: 0.36s var(--ease) both vt-in; }
 @keyframes vt-out { to { opacity: 0; transform: scale(0.985); } }
 @keyframes vt-in { from { opacity: 0; transform: translateY(10px) scale(0.99); } }
-::view-transition-group(dock-lens) { animation-duration: 0.45s; animation-timing-function: var(--spring); }
 ::view-transition-group(top), ::view-transition-group(dock) { animation: none; }
 .skeleton { border-radius: var(--r-md); min-height: 104px; background: linear-gradient(100deg, rgb(255 255 255 / 0.5) 30%, rgb(255 255 255 / 0.95) 50%, rgb(255 255 255 / 0.5) 70%) 0 0 / 200% 100%; animation: shimmer 1.3s linear infinite; }
 @keyframes shimmer { to { background-position: -200% 0; } }
@@ -463,9 +459,7 @@ html[data-sheet="open"] main { transform: scale(0.955); filter: saturate(0.85); 
 ::view-transition-group(page-ic) { animation-duration: 0.42s; animation-timing-function: var(--ios); }
 
 /* Dock: the chosen icon pops; the lens carries a moving sheen. */
-.dock a[aria-current="page"] svg { animation: pop 0.5s var(--spring); }
 @keyframes pop { from { transform: scale(0.6); } }
-.dock-lens::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: linear-gradient(110deg, transparent 35%, rgb(255 255 255 / 0.28) 50%, transparent 65%) 0 0 / 250% 100%; animation: lens-sheen 3.6s ease-in-out infinite; }
 @keyframes lens-sheen { from { background-position: 120% 0; } to { background-position: -60% 0; } }
 
 /* Scroll-linked: the top bar gains depth and the arch settles back as the page moves. */
@@ -477,3 +471,40 @@ html[data-sheet="open"] main { transform: scale(0.955); filter: saturate(0.85); 
     @keyframes arch-settle { to { transform: translateY(18px) scale(0.965); opacity: 0.75; } }
   }
 }
+
+/* ---- Dock lens: one drop of clear glass that slides to the touched tab at once ---- */
+.dock { --dir: 1; }
+[dir="rtl"] .dock { --dir: -1; }
+.dock-lens { position: absolute; top: 6px; bottom: 6px; inset-inline-start: 6px; width: calc((100% - 12px) / 4); pointer-events: none; will-change: transform;
+  transform: translateX(calc(var(--i, 0) * 100% * var(--dir))); transition: transform 0.5s var(--spring), opacity 0.2s; }
+.dock-lens.off { opacity: 0; }
+.dock-lens i { position: absolute; inset: 0; border-radius: 999px; animation: lens-liquid 0.55s var(--ease);
+  /* Clear glass: light pooling at the top, a warm caustic along the bottom, a bright rim. */
+  background:
+    radial-gradient(120% 90% at 50% -20%, rgb(255 255 255 / 0.95), transparent 60%),
+    radial-gradient(90% 60% at 50% 125%, rgb(242 181 170 / 0.75), transparent 70%),
+    linear-gradient(180deg, rgb(255 255 255 / 0.72), rgb(255 244 236 / 0.4));
+  border: 1px solid rgb(255 255 255 / 0.95);
+  box-shadow: inset 0 1.5px 1px rgb(255 255 255 / 1), inset 0 -1px 1px rgb(184 137 45 / 0.35), inset 0 -10px 14px -8px rgb(122 31 20 / 0.22), inset 0 0 0 1px rgb(255 255 255 / 0.35),
+    0 8px 18px -8px rgb(90 20 11 / 0.5), 0 1px 3px rgb(90 20 11 / 0.18); }
+/* Specular glint and a slow travelling sheen. */
+.dock-lens i::before { content: ""; position: absolute; top: 4px; inset-inline-start: 14%; width: 46%; height: 34%; border-radius: 999px; background: linear-gradient(180deg, rgb(255 255 255 / 0.95), rgb(255 255 255 / 0)); filter: blur(1.5px); }
+.dock-lens i::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: linear-gradient(110deg, transparent 38%, rgb(255 255 255 / 0.55) 50%, transparent 62%) 0 0 / 260% 100%; animation: lens-sheen 4.2s ease-in-out infinite; }
+/* The drop stretches as it sets off and settles as it lands. */
+@keyframes lens-liquid { 0% { transform: scale(1); } 30% { transform: scale(1.2, 0.84); } 62% { transform: scale(0.96, 1.05); } 100% { transform: scale(1); } }
+.dock a { z-index: 1; }
+.dock a[data-on] { color: var(--maroon-deep); font-weight: 600; }
+.dock a[data-on] svg { transform: translateY(-1px) scale(1.1); }
+.dock a:active { transform: none; }
+.dock a:active svg { transform: scale(0.9); }
+
+/* Each screen settles in quickly; no whole-page snapshot on tab changes. */
+.view { animation: view-in 0.26s var(--ease) both; }
+@keyframes view-in { from { opacity: 0; transform: translateY(6px); } }
+.grid > * { animation-delay: calc(var(--i, 0) * 32ms + 20ms); animation-duration: 0.45s; }
+/* A little more body so the drop reads against the dock. */
+.dock-lens i { background:
+    radial-gradient(120% 90% at 50% -20%, rgb(255 255 255 / 0.98), transparent 58%),
+    radial-gradient(95% 70% at 50% 130%, rgb(236 150 134 / 0.8), transparent 72%),
+    linear-gradient(180deg, rgb(255 255 255 / 0.8), rgb(255 236 226 / 0.55));
+  box-shadow: inset 0 1.5px 1px #fff, inset 0 -1px 1px rgb(184 137 45 / 0.45), inset 0 -12px 16px -8px rgb(122 31 20 / 0.28), 0 0 0 1px rgb(122 31 20 / 0.1), 0 10px 20px -8px rgb(90 20 11 / 0.55), 0 2px 4px rgb(90 20 11 / 0.18); }
