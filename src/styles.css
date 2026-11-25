@@ -55,7 +55,8 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 a, button, input, label, summary { touch-action: manipulation; } /* [I151] */
 h1, h2, h3, h4 { text-wrap: balance; } p, li { text-wrap: pretty; overflow-wrap: anywhere; } /* [I144] [I146] */
 .body p, .lead, .note-line { max-width: 62ch; } /* [I145] */
-.num, .dayline-value, .hours, .count, .wifi-code, .zday-time, .menu-time, time, .num { white-space: nowrap; }
+.num, .dayline-value, .hours, .count, .wifi-code, .zday-time, .menu-time, time { font-variant-numeric: lining-nums tabular-nums; } /* [I143] */
+.num { white-space: nowrap; }
 :focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; box-shadow: 0 0 0 6px rgb(255 255 255 / 0.9); border-radius: inherit; } /* [I56] */
 [data-fallback] { font-family: "Readex Pro Variable", system-ui, sans-serif; line-height: 1.5; text-align: left; }
 .pre { white-space: pre-line; }
