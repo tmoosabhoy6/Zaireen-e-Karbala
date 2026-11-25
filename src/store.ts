@@ -17,6 +17,9 @@ interface State {
   /** True when the last fetch failed and saved content is being shown. */
   stale: boolean;
   failed: boolean;
+  /** When content last arrived from the server (ms). */
+  at: number | null;
+  loading: boolean;
 }
 
 const LANG_KEY = "zk.lang";
@@ -38,7 +41,7 @@ const write = (key: string, value: unknown) => {
   }
 };
 
-let state: State = { lang: read<Lang>(LANG_KEY) === "lud" ? "lud" : "en", payload: read<Payload>(CACHE_KEY), stale: false, failed: false };
+let state: State = { lang: read<Lang>(LANG_KEY) === "lud" ? "lud" : "en", payload: read<Payload>(CACHE_KEY), stale: false, failed: false, at: read<number>("zk.content.at"), loading: false };
 const listeners = new Set<() => void>();
 const set = (patch: Partial<State>) => {
   state = { ...state, ...patch };
@@ -61,16 +64,19 @@ export function setLang(lang: Lang) {
 let inflight: Promise<void> | null = null;
 export function refresh(): Promise<void> {
   inflight ??= (async () => {
+    set({ loading: true });
     try {
       const res = await fetch("/api/content", { credentials: "same-origin", cache: "no-store" });
       if (!res.ok) throw new Error(String(res.status));
       const payload = (await res.json()) as Payload;
       write(CACHE_KEY, payload);
-      set({ payload, stale: false, failed: false });
+      write("zk.content.at", Date.now());
+      set({ payload, stale: false, failed: false, at: Date.now() });
     } catch {
       set({ stale: !!state.payload, failed: !state.payload });
     } finally {
       inflight = null;
+      set({ loading: false });
     }
   })();
   return inflight;

@@ -13,12 +13,21 @@ function transition(change: () => void) {
 
 const isPage = (path: string) => path.startsWith("/p/");
 let last = location.pathname;
+const scrolls = new Map<string, number>();
+if ("scrollRestoration" in history) history.scrollRestoration = "manual";
 
 window.addEventListener("popstate", () => {
   const morph = isPage(last) || isPage(location.pathname);
+  scrolls.set(last, window.scrollY);
   last = location.pathname;
-  if (morph) transition(notify);
-  else notify();
+  document.documentElement.dataset.nav = "back";
+  const land = () => {
+    notify();
+    // [F15] Coming back lands where the reader left off, not at the top.
+    requestAnimationFrame(() => window.scrollTo(0, scrolls.get(location.pathname) ?? 0));
+  };
+  if (morph) transition(land);
+  else land();
 });
 
 /**
@@ -27,6 +36,8 @@ window.addEventListener("popstate", () => {
  */
 export function go(path: string) {
   if (path === location.pathname) return;
+  scrolls.set(location.pathname, window.scrollY);
+  document.documentElement.dataset.nav = "forward";
   const change = () => {
     history.pushState(null, "", path);
     last = path;

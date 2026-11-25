@@ -70,3 +70,15 @@ Ideas only: every effect is written for this app in plain CSS and a few lines of
 ## Dock response
 - **Tab switches no longer take a whole-page snapshot.** The view transition made the dock's highlight wait for the browser to capture the page. The lens is now one element that slides with a spring the moment a tab is touched, before the screen changes. Cross-fade and the icon morph remain only for opening and leaving an info page.
 - **The lens is clear glass** (light pooling at the top, a warm caustic along the bottom, a bright rim, a glint and a slow sheen) and stretches as it sets off. It has no backdrop blur of its own, because blur nested inside the dock's blur is slow on phones.
+
+## Nothing hidden (owner's rule, after the tap-to-open "whole day" went unnoticed)
+- Zaereen may not be tech-savvy, so **information is never behind an unmarked tap, a gesture, a switch or a truncation**. Aaj shows the whole day, the full menu (both meals), the room with how to get in, and announcements in full. The tap-to-open tiles and drag sheets are removed.
+- Anything that opens or moves carries a visible label, chevron or button ("Show older announcements", "What to bring and dress", "Open full screen").
+- This makes Aaj a scrolling page again rather than one screen; visibility wins over compactness.
+- Cards below the fold fade in softly but can never stay hidden: they start partly visible and finish by themselves even if the scroll observer fails.
+- A counted pass of 153 improvements and 53 fault fixes is listed in `UX-CHANGELOG.md`. Every item's code is marked in the source, and `npm run check` fails if one goes missing.
+
+## Rooms and the "Krb Accomodation" Sheet (investigated; not switched)
+- The Sheet is an Excel file in Drive whose ACCOMMODATION tab is a grid of room by night, with free text such as an agent label and a four-digit tour number. **It has no ITS column**: it can say which rooms a tour has, not which room a person has.
+- So it cannot replace NKERP for "a zair sees only their own room". About half of tours occupy a single room; for those, the Sheet could supply the room once NKERP has confirmed the ITS is on the tour.
+- Reading it from the Worker would need the file shared with a service account and parsed as xlsx (the Sheets API does not read Office files). Not done: it needs the owner's decision.

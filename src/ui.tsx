@@ -1,11 +1,13 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import {
-  Accessibility, Banknote, BedDouble, BookOpen, Building2, Bus, Car, Check, ChevronLeft, ChevronRight, Clock, Copy, HandHeart,
-  HeartPulse, IdCard, Info, Luggage, MapPin, MessageCircle, Phone, Plane, Search, Shirt, Sparkles, Utensils, Wifi, Wrench, X,
+  Accessibility, AlertTriangle, Banknote, BedDouble, BookOpen, Building2, Bus, Car, ChevronDown, ChevronLeft, ChevronRight, Clock, Copy,
+  ExternalLink, HandHeart, HeartPulse, IdCard, Info, Link2, Luggage, MapPin, Maximize2, MessageCircle, Moon, Phone, Plane, Search, Shirt,
+  Sparkles, Sun, Utensils, Wifi, Wrench, X,
 } from "lucide-react";
 import { parseRange } from "../shared/time";
-import { tr, type Lang } from "./i18n";
+import { DrawCheck, fmtWait, haptic, toast } from "./fx";
+import { tr, tr2, type Lang } from "./i18n";
 import { go } from "./router";
 import { byId, inGroup, isFallback, loc, type Item, type Payload } from "./store";
 
@@ -29,12 +31,14 @@ export interface Ctx {
   minutes: number;
 }
 
-/** Text in the reader's language. English shown to a Lisan reader is set left-to-right in the Latin face. */
+/** English shown to a Lisan reader is set left-to-right in the Latin face and marked as English. [F53] */
+export const fallbackProps = (on: boolean) => (on ? { dir: "ltr" as const, lang: "en", "data-fallback": "" } : {});
+
+/** Text in the reader's language. */
 export function T({ item, field, lang, as: Tag = "span", className }: { item?: Item; field: string; lang: Lang; as?: any; className?: string }) {
   const text = loc(item, field, lang);
   if (!text) return null;
-  const fallback = isFallback(item, field, lang);
-  return <Tag className={className} {...(fallback ? { dir: "ltr", lang: "en", "data-fallback": "" } : {})}>{text}</Tag>;
+  return <Tag className={className} {...fallbackProps(isFallback(item, field, lang))}>{text}</Tag>;
 }
 
 /**
@@ -43,7 +47,7 @@ export function T({ item, field, lang, as: Tag = "span", className }: { item?: I
  */
 export function Body({ text, steps, fallback }: { text: string; steps?: boolean; fallback?: boolean }) {
   const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
-  const dir = fallback ? { dir: "ltr" as const, lang: "en", "data-fallback": "" } : {};
+  const dir = fallbackProps(!!fallback);
   if (steps) {
     return (
       <ol className="steps" {...dir}>
@@ -61,33 +65,41 @@ export function Body({ text, steps, fallback }: { text: string; steps?: boolean;
     if (l.startsWith("- ")) bullets.push(l.slice(2));
     else {
       flush();
-      out.push(l.startsWith("!! ") ? <p key={out.length} className="must">{l.slice(3)}</p> : <p key={out.length}>{l}</p>);
+      // [I103] A line that must not be missed carries a warning mark as well as colour.
+      out.push(l.startsWith("!! ")
+        ? <p key={out.length} className="must"><AlertTriangle size={19} aria-hidden="true" /><span>{l.slice(3)}</span></p>
+        : <p key={out.length}>{l}</p>);
     }
   }
   flush();
   return <div className="body" {...dir}>{out}</div>;
 }
 
-/** The slides' header tab: a rose block with one notched corner. */
-export function Tab({ children }: { children: ReactNode }) {
-  return <h2 className="tab"><span>{children}</span></h2>;
+/** Section heading. */
+export function Tab({ children, icon }: { children: ReactNode; icon?: ReactNode }) {
+  return <h2 className="tab">{icon && <span className="tab-ic">{icon}</span>}<span>{children}</span></h2>;
 }
 
-export const Soon = ({ lang }: { lang: Lang }) => <span className="soon">{tr(lang, "soon")}</span>;
+/** [I113] What a department still owes: a dashed chip with a clock, never a made-up value. */
+export const Soon = ({ lang }: { lang: Lang }) => <span className="soon-chip"><Clock size={15} aria-hidden="true" />{tr(lang, "soon")}</span>;
 
+/** Copies a value; a toast names what was copied and the button draws a check. [F39] [I40] [I117] */
 export function CopyButton({ value, lang, label }: { value: string; lang: Lang; label?: string }) {
   const [done, setDone] = useState(false);
   return (
-    <button type="button" className="btn-quiet" aria-label={label ?? tr(lang, "copy")}
-      onClick={async () => {
+    <button type="button" className={`btn-quiet${done ? " did" : ""}`} aria-label={label ?? tr(lang, "copy")}
+      onClick={async (e) => {
+        const tile = e.currentTarget.closest(".wifi-value");
         try {
           await navigator.clipboard.writeText(value);
-          navigator.vibrate?.(10);
+          haptic(10);
           setDone(true);
-          setTimeout(() => setDone(false), 2000);
+          toast(`${tr(lang, "copied")}: ${value}`);
+          tile?.classList.add("flash"); // [I115]
+          setTimeout(() => { setDone(false); tile?.classList.remove("flash"); }, 2000);
         } catch { /* clipboard blocked: the value is on screen to type */ }
       }}>
-      {done ? <Check size={18} aria-hidden="true" /> : <Copy size={18} aria-hidden="true" />}
+      {done ? <DrawCheck size={18} /> : <Copy size={18} aria-hidden="true" />}
       <span>{tr(lang, done ? "copied" : "copy")}</span>
     </button>
   );
@@ -102,163 +114,137 @@ export function Fact({ item, ctx }: { item?: Item; ctx: Ctx }) {
   const type = item.data.type as string | undefined;
   const v = (item.data.v as string | undefined) ?? "";
   const value = loc(item, "value", lang);
+  // [I110] A leading icon says what kind of fact this is.
+  const Lead = type === "phone" ? Phone : type === "whatsapp" ? MessageCircle : type === "url" ? Link2 : null;
   return (
     <div className="fact">
-      <T item={item} field="label" lang={lang} className="fact-label" />
-      {item.missing ? <Soon lang={lang} /> : (
-        <span className="fact-value">
-          {value && <T item={item} field="value" lang={lang} as="span" className="pre" />}
-          {(type === "phone" || type === "whatsapp") && v && (
-            <span className="fact-actions">
-              <bdi dir="ltr">{v}</bdi>
-              {type === "phone" && <a className="btn-quiet" href={`tel:${digits(v)}`}><Phone size={18} aria-hidden="true" /><span>{tr(lang, "call")}</span></a>}
-              <a className="btn-quiet" href={`https://wa.me/${digits(v).replace(/^\+/, "")}`} target="_blank" rel="noopener noreferrer">
-                <MessageCircle size={18} aria-hidden="true" /><span>{tr(lang, "whatsapp")}</span>
-              </a>
-            </span>
-          )}
-          {type === "url" && v && <a className="btn-quiet" href={v} target="_blank" rel="noopener noreferrer"><span>{v.replace(/^https?:\/\//, "")}</span></a>}
-        </span>
-      )}
+      {Lead && <span className={`fact-ic ${type}`}><Lead size={18} aria-hidden="true" /></span>}
+      <div className="fact-main">
+        <T item={item} field="label" lang={lang} className="fact-label" />
+        {item.missing ? <Soon lang={lang} /> : (
+          <span className="fact-value">
+            {value && <T item={item} field="value" lang={lang} as="span" className="pre" />}
+            {(type === "phone" || type === "whatsapp") && v && (
+              <span className="fact-actions">
+                <bdi dir="ltr" className="num">{v}</bdi>
+                {type === "phone" && <a className="btn-quiet call" href={`tel:${digits(v)}`}><Phone size={18} aria-hidden="true" /><span>{tr(lang, "call")}</span></a>}
+                <a className="btn-quiet wa" href={`https://wa.me/${digits(v).replace(/^\+/, "")}`} target="_blank" rel="noopener noreferrer">
+                  <MessageCircle size={18} aria-hidden="true" /><span>{tr(lang, "whatsapp")}</span>
+                </a>
+                <CopyButton value={v} lang={lang} /> {/* [I111] */}
+              </span>
+            )}
+            {type === "url" && v && <a className="btn-quiet" href={v} target="_blank" rel="noopener noreferrer"><span>{v.replace(/^https?:\/\//, "")}</span><ExternalLink size={16} aria-hidden="true" /></a>}
+          </span>
+        )}
+      </div>
     </div>
   );
 }
 
-/** "Open now" from the hours text; nothing when a line is not two clock times. */
-function openState(hours: string, minutes: number): { open: boolean; opensAt?: string } | null {
-  const ranges = hours.split("\n").map((line) => ({ line, r: parseRange(line) }));
-  if (!ranges.length || ranges.some((x) => !x.r)) return null;
-  if (ranges.some((x) => minutes >= x.r![0] && minutes < x.r![1])) return { open: true };
-  const next = ranges.filter((x) => x.r![0] > minutes).sort((a, b) => a.r![0] - b.r![0])[0];
-  const m = next ? /(\d{1,2}(?:[:.]\d{2})?)\s*(?:[ap]\.?m)?\s*(?:to|-|–)/i.exec(next.line) : null;
-  return { open: false, opensAt: next ? fmt(next.r![0]) : undefined, ...(m ? {} : {}) };
-}
 export const fmt = (min: number) => `${((Math.floor(min / 60) + 11) % 12) + 1}:${String(min % 60).padStart(2, "0")} ${min < 720 ? "am" : "pm"}`;
 
-export function Office({ item, ctx, compact }: { item?: Item; ctx: Ctx; compact?: boolean }) {
+interface OpenState { open: boolean; wait: number | null; current: number }
+/** "Open now" from the hours text; null when a line is not two clock times. */
+function openState(hours: string, minutes: number): OpenState | null {
+  const ranges = hours.split("\n").map((line) => parseRange(line));
+  if (!ranges.length || ranges.some((r) => !r)) return null;
+  const current = ranges.findIndex((r) => minutes >= r![0] && minutes < r![1]);
+  if (current >= 0) return { open: true, wait: ranges[current]![1] - minutes, current };
+  const next = ranges.filter((r) => r![0] > minutes).sort((a, b) => a![0] - b![0])[0];
+  return { open: false, wait: next ? next[0] - minutes : null, current: -1 };
+}
+export const officeHours = (item: Item, payload: Payload) => item.t.hours || (item.data.useDefault ? byId(payload, "fact.hours.default")?.t.value ?? "" : "");
+export const isOpenNow = (item: Item, payload: Payload, minutes: number) => !!openState(officeHours(item, payload), minutes)?.open;
+
+export function Office({ item, ctx }: { item?: Item; ctx: Ctx }) {
   if (!item) return null;
   const { lang, payload, minutes } = ctx;
   const own = loc(item, "hours", lang);
   const hours = own || (item.data.useDefault ? loc(byId(payload, "fact.hours.default"), "value", lang) : "");
   // Clock times read the same in both languages, so "open now" is worked out from the English lines.
-  const enHours = item.t.hours || (item.data.useDefault ? byId(payload, "fact.hours.default")?.t.value ?? "" : "");
-  const state = enHours ? openState(enHours, minutes) : null;
+  const state = officeHours(item, payload) ? openState(officeHours(item, payload), minutes) : null;
   const note = loc(item, "note", lang);
   return (
-    <section className={`office${compact ? " compact" : ""}`}>
+    <section className="office" data-open={state ? String(state.open) : undefined}>
       <div className="office-head">
         <T item={item} field="name" lang={lang} as="h3" />
-        {state && <span className={`pill ${state.open ? "open" : "shut"}`}>{tr(lang, state.open ? "openNow" : "closedNow")}</span>}
+        {state && <span className={`pill ${state.open ? "open" : "shut"}`}>{state.open && <i className="live" aria-hidden="true" />}{tr(lang, state.open ? "openNow" : "closedNow")}</span>}
       </div>
       <p className="office-where"><MapPin size={16} aria-hidden="true" /><T item={item} field="where" lang={lang} /></p>
       {hours ? (
-        <ul className="hours" dir="ltr">{hours.split("\n").map((h, i) => <li key={i}><bdi>{h}</bdi></li>)}</ul>
+        <ul className="hours" dir="ltr">{hours.split("\n").map((h, i) => <li key={i} className={state?.current === i ? "on" : ""}><bdi>{h}</bdi></li>)}</ul>
       ) : <Soon lang={lang} />}
-      {state && !state.open && state.opensAt && <p className="opens">{tr(lang, "opensAt")} <bdi dir="ltr">{state.opensAt}</bdi></p>}
+      {state && state.wait !== null && <p className="opens"><Clock size={15} aria-hidden="true" />{tr2(lang, state.open ? "closesIn" : "opensIn")} <bdi dir="ltr" className="num">{fmtWait(state.wait)}</bdi></p>}
       {note && <T item={item} field="note" lang={lang} as="p" className="office-note" />}
       {((item.data.facts as string[] | undefined) ?? []).map((id) => <Fact key={id} item={byId(payload, id)} ctx={ctx} />)}
     </section>
   );
 }
 
+/** [I108] Every office, with a plain switch between all of them and those open now. */
+function Offices({ ctx }: { ctx: Ctx }) {
+  const { lang, payload, minutes } = ctx;
+  const [only, setOnly] = useState(false);
+  const all = inGroup(payload, "office", "offices");
+  const open = all.filter((o) => isOpenNow(o, payload, minutes));
+  const shown = only ? open : all;
+  return (
+    <>
+      <div className="chips" role="group">
+        <button type="button" className="chip" aria-pressed={!only} onClick={() => { haptic(); setOnly(false); }}>{tr2(lang, "all")} <b>{all.length}</b></button>
+        <button type="button" className="chip" aria-pressed={only} onClick={() => { haptic(); setOnly(true); }}><i className="live" aria-hidden="true" />{tr(lang, "openNow")} <b>{open.length}</b></button>
+      </div>
+      {shown.map((o) => <div key={o.id} className="block"><Office item={o} ctx={ctx} /></div>)}
+      {shown.length === 0 && <div className="block empty"><Clock size={26} aria-hidden="true" /><p>{tr(lang, "closedNow")}</p></div>}
+    </>
+  );
+}
+
+/** A picture that fades in once loaded. [I104] */
+export function Pic({ src, alt, className }: { src: string; alt: string; className?: string }) {
+  const [ready, setReady] = useState(false);
+  return <img src={src} alt={alt} className={`pic${ready ? " ready" : ""} ${className ?? ""}`} loading="lazy" onLoad={() => setReady(true)} />;
+}
+
+/** Today's menu in full: both meals, every item, each meal's time, and the card as a labelled button. [F2] [F3] */
 export function MenuCard({ ctx }: { ctx: Ctx }) {
-  const { lang, payload } = ctx;
+  const { lang, payload, minutes } = ctx;
   const menu = payload.menu;
   const [zoom, setZoom] = useState(false);
-  if (!menu || (!menu.lunch.length && !menu.dinner.length && !menu.image)) return <p className="soon">{tr(lang, "menuNone")}</p>;
+  if (!menu || (!menu.lunch.length && !menu.dinner.length && !menu.image)) {
+    return <div className="empty"><Utensils size={26} aria-hidden="true" /><p>{tr(lang, "menuNone")}</p></div>;
+  }
   return (
     <div className="menu">
-      {menu.hijri && <p className="menu-date" dir="ltr">{menu.hijri}</p>}
-      <div className="menu-cols" dir="ltr">
-        {(["lunch", "dinner"] as const).map((meal) => menu[meal].length > 0 && (
-          <div key={meal}>
-            <h4 dir="auto">{loc(byId(payload, `fact.mawaid.${meal}`), "label", lang) || tr(lang, meal)}</h4>
-            <ul>{menu[meal].map((x, i) => <li key={i}>{x}</li>)}</ul>
-          </div>
-        ))}
+      <div className="menu-cols">
+        {(["lunch", "dinner"] as const).map((meal) => {
+          const fact = byId(payload, `fact.mawaid.${meal}`);
+          const range = parseRange(fact?.t.value ?? "");
+          const serving = !!range && minutes >= range[0] && minutes < range[1];
+          const MealIcon = meal === "lunch" ? Sun : Moon;
+          return menu[meal].length > 0 && (
+            <div key={meal} className={serving ? "serving" : ""}>
+              {/* [F45] The same meal names as the day list. [I20] [I18] [I22] */}
+              <h4><MealIcon size={17} aria-hidden="true" /><span {...fallbackProps(isFallback(fact, "label", lang))}>{loc(fact, "label", lang) || tr(lang, meal)}</span>{serving && <span className="pill open">{tr(lang, "now")}</span>}</h4>
+              {fact && <p className="menu-time" dir="ltr">{fact.t.value}</p>}
+              <ul dir="ltr">{menu[meal].map((x, i) => <li key={i} style={{ ["--i" as string]: i }}>{x}</li>)}</ul>
+            </div>
+          );
+        })}
       </div>
-      {menu.image && <button type="button" className="btn-quiet" onClick={() => setZoom(true)}>{tr(lang, "menuImage")}</button>}
+      {menu.image && (
+        <button type="button" className="menu-card-btn" onClick={() => setZoom(true)}>
+          <Pic src={`/api/file/${menu.image}`} alt="" />
+          <span><Maximize2 size={18} aria-hidden="true" />{tr(lang, "menuImage")}</span>
+        </button>
+      )}
       {zoom && menu.image && <Lightbox src={`/api/file/${menu.image}`} alt={tr(lang, "menuToday")} onClose={() => setZoom(false)} lang={lang} />}
     </div>
   );
 }
 
-/**
- * A pane that rises over the dashboard with the details behind a tile.
- * Behaves like a native sheet: drag it down by its grip or header to dismiss (it resists when pulled
- * up), it leaves with the same motion it arrived with, and the screen behind steps back while it is open.
- */
-export function Sheet({ title, onClose, lang, children }: { title: string; onClose: () => void; lang: Lang; children: ReactNode }) {
-  const panel = useRef<HTMLDivElement>(null);
-  const drag = useRef<{ y: number; t: number; dy: number } | null>(null);
-  const [closing, setClosing] = useState(false);
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setClosing(true);
-    document.addEventListener("keydown", onKey);
-    document.body.style.overflow = "hidden";
-    document.documentElement.dataset.sheet = "open";
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      document.body.style.overflow = "";
-      delete document.documentElement.dataset.sheet;
-    };
-  }, []);
-  useEffect(() => {
-    if (closing) delete document.documentElement.dataset.sheet;
-  }, [closing]);
-  const move = (dy: number) => {
-    const el = panel.current;
-    if (!el) return;
-    el.style.transition = "none";
-    el.style.transform = `translateY(${dy}px)`;
-    el.style.setProperty("--from", `${dy}px`);
-  };
-  const handle = {
-    onPointerDown: (e: React.PointerEvent) => {
-      drag.current = { y: e.clientY, t: e.timeStamp, dy: 0 };
-      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-    },
-    onPointerMove: (e: React.PointerEvent) => {
-      const d = drag.current;
-      if (!d) return;
-      const raw = e.clientY - d.y;
-      d.dy = raw < 0 ? -Math.sqrt(-raw) * 2.2 : raw; // the more it is pulled up, the less it moves
-      move(d.dy);
-    },
-    onPointerUp: (e: React.PointerEvent) => {
-      const d = drag.current;
-      drag.current = null;
-      const el = panel.current;
-      if (!d || !el) return;
-      const speed = d.dy / Math.max(1, e.timeStamp - d.t);
-      el.style.transition = "";
-      if (d.dy > 110 || (speed > 0.45 && d.dy > 24)) setClosing(true);
-      else el.style.transform = "";
-    },
-    onPointerCancel: () => {
-      drag.current = null;
-      if (panel.current) { panel.current.style.transition = ""; panel.current.style.transform = ""; }
-    },
-  };
-  return createPortal(
-    <div className={`sheet-wrap${closing ? " closing" : ""}`} role="dialog" aria-modal="true" aria-label={title}>
-      <div className="sheet-back" onClick={() => setClosing(true)} />
-      <div className="sheet frost" ref={panel} onAnimationEnd={(e) => { if (closing && e.animationName === "sheet-down") onClose(); }}>
-        <div className="sheet-drag" {...handle}>
-          <div className="sheet-grip" aria-hidden="true" />
-          <div className="sheet-head">
-            <h2>{title}</h2>
-            <button type="button" className="sheet-close" onPointerDown={(e) => e.stopPropagation()} onClick={() => setClosing(true)} aria-label={tr(lang, "close")}><X size={22} aria-hidden="true" /></button>
-          </div>
-        </div>
-        {children}
-      </div>
-    </div>,
-    document.body,
-  );
-}
-
-/** Full-screen picture. The page's own pinch-zoom is used, so nothing is cropped or re-drawn. */
+/** Full-screen picture with a labelled close button. Pinch to zoom; tapping the picture also enlarges it. [I105] */
 export function Lightbox({ src, alt, onClose, lang }: { src: string; alt: string; onClose: () => void; lang: Lang }) {
   const [big, setBig] = useState(false);
   useEffect(() => {
@@ -271,8 +257,8 @@ export function Lightbox({ src, alt, onClose, lang }: { src: string; alt: string
     };
   }, [onClose]);
   return createPortal(
-    <div className="lightbox" role="dialog" aria-modal="true" aria-label={alt}>
-      <button type="button" className="lightbox-close frost" onClick={onClose} aria-label={tr(lang, "close")}><X size={26} aria-hidden="true" /></button>
+    <div className="lightbox" role="dialog" aria-modal="true" aria-label={alt || tr2(lang, "fullScreen")}>
+      <button type="button" className="lightbox-close frost" onClick={onClose}><X size={22} aria-hidden="true" /><span>{tr(lang, "close")}</span></button>
       <div className="lightbox-scroll" onClick={() => setBig((b) => !b)}>
         <img src={src} alt={alt} className={big ? "big" : ""} />
       </div>
@@ -283,13 +269,26 @@ export function Lightbox({ src, alt, onClose, lang }: { src: string; alt: string
 
 export function PageLink({ item, lang }: { item: Item; lang: Lang }) {
   const Chevron = lang === "lud" ? ChevronLeft : ChevronRight;
+  const path = `/p/${item.id.replace(/^page\./, "")}`;
   return (
-    <a className="row-link" href={`/p/${item.id.replace(/^page\./, "")}`}
-      onClick={(e) => { e.preventDefault(); go(`/p/${item.id.replace(/^page\./, "")}`); }}>
+    <a className="row-link" href={path} onClick={(e) => { e.preventDefault(); go(path); }}>
       <span className="row-icon"><Icon name={item.icon} /></span>
       <T item={item} field="title" lang={lang} className="row-title" />
       <Chevron size={20} aria-hidden="true" className="row-chevron" />
     </a>
+  );
+}
+
+/** A section that opens and closes with a labelled button, never an unmarked tap. [F12] [I77] [I112] */
+export function Fold({ label, open: start = false, children }: { label: ReactNode; open?: boolean; children: ReactNode }) {
+  const [open, setOpen] = useState(start);
+  return (
+    <div className="fold" data-open={open}>
+      <button type="button" className="fold-btn" aria-expanded={open} onClick={() => { haptic(); setOpen(!open); }}>
+        <span>{label}</span><ChevronDown size={20} aria-hidden="true" />
+      </button>
+      <div className="fold-body"><div>{children}</div></div>
+    </div>
   );
 }
 
@@ -309,7 +308,7 @@ export function Blocks({ pageId, ctx, wifi }: { pageId: string; ctx: Ctx; wifi?:
         if (b.missing) return <div key={b.id} className="block">{head}<Soon lang={lang} /></div>;
         switch (type) {
           case "warn":
-            return <div key={b.id} className="block warn">{head}<Body text={body} fallback={fb} /></div>;
+            return <div key={b.id} className="block warn"><span className="warn-ic"><AlertTriangle size={24} aria-hidden="true" /></span>{head}<Body text={body} fallback={fb} /></div>;
           case "steps":
             return <div key={b.id} className="block">{head}<Body text={body} steps fallback={fb} /></div>;
           case "image": {
@@ -317,24 +316,24 @@ export function Blocks({ pageId, ctx, wifi }: { pageId: string; ctx: Ctx; wifi?:
             const caption = loc(b, "caption", lang);
             return (
               <figure key={b.id} className={`block figure${b.data.narrow ? " narrow" : ""}`}>
-                {b.data.zoom
-                  ? <button type="button" className="figure-zoom" onClick={() => setZoom(src)}><img src={src} alt={title || caption} /></button>
-                  : <img src={src} alt={title || caption} />}
-                {caption && <T item={b} field="caption" lang={lang} as="figcaption" />}
+                {b.data.zoom ? <button type="button" className="figure-zoom" onClick={() => setZoom(src)} aria-label={tr2(lang, "fullScreen")}><Pic src={src} alt={title || caption} /></button> : <Pic src={src} alt={title || caption} />}
+                {/* [F13] Zooming has its own labelled button; tapping the picture is a bonus, not the only way. */}
+                {b.data.zoom && <button type="button" className="btn-main slim" onClick={() => setZoom(src)}><Maximize2 size={19} aria-hidden="true" />{tr2(lang, "fullScreen")}</button>}
+                {caption && !b.data.zoom && <T item={b} field="caption" lang={lang} as="figcaption" />}
               </figure>
             );
           }
           case "office":
             return <div key={b.id} className="block">{head}<Office item={byId(payload, b.data.ref)} ctx={ctx} /></div>;
           case "offices":
-            return <div key={b.id} className="block">{inGroup(payload, "office", "offices").map((o) => <Office key={o.id} item={o} ctx={ctx} />)}</div>;
+            return <Offices key={b.id} ctx={ctx} />;
           case "facts":
             return <div key={b.id} className="block">{head}<div className="facts">{((b.data.refs as string[]) ?? []).map((id) => <Fact key={id} item={byId(payload, id)} ctx={ctx} />)}</div></div>;
           case "menu":
             return <div key={b.id} className="block">{head}<MenuCard ctx={ctx} /></div>;
           case "link": {
             const target = byId(payload, b.data.to);
-            return target ? <div key={b.id} className="block"><PageLink item={target} lang={lang} /></div> : null;
+            return target ? <PageLink key={b.id} item={target} lang={lang} /> : null;
           }
           case "wifi":
             return <div key={b.id} className="block">{wifi}</div>;
@@ -342,7 +341,7 @@ export function Blocks({ pageId, ctx, wifi }: { pageId: string; ctx: Ctx; wifi?:
             const faqs = inGroup(payload, "faq", "faq");
             return faqs.length ? (
               <div key={b.id} className="block">
-                {faqs.map((f) => <details key={f.id} className="faq"><summary><T item={f} field="q" lang={lang} /></summary><Body text={loc(f, "a", lang)} fallback={isFallback(f, "a", lang)} /></details>)}
+                {faqs.map((f) => <Fold key={f.id} label={<T item={f} field="q" lang={lang} />}><Body text={loc(f, "a", lang)} fallback={isFallback(f, "a", lang)} /></Fold>)}
               </div>
             ) : null;
           }
@@ -354,7 +353,7 @@ export function Blocks({ pageId, ctx, wifi }: { pageId: string; ctx: Ctx; wifi?:
         <div className="block facts">
           {owed.map((f) => f.missing
             ? <Fact key={f.id} item={f} ctx={ctx} />
-            : <div key={f.id} className="block"><T item={f} field="label" lang={lang} as="h3" className="block-title" /><Body text={loc(f, "value", lang)} fallback={isFallback(f, "value", lang)} /></div>)}
+            : <div key={f.id}><T item={f} field="label" lang={lang} as="h3" className="block-title" /><Body text={loc(f, "value", lang)} fallback={isFallback(f, "value", lang)} /></div>)}
         </div>
       )}
       {zoom && <Lightbox src={zoom} alt="" onClose={() => setZoom(null)} lang={lang} />}

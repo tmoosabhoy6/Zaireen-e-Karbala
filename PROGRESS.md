@@ -14,7 +14,7 @@ The brief's own milestone list (section 18) did not arrive, so this order is min
 1. **Public core + admin** - done and live. Aaj (day list, menu, majlis, announcements, community button, quick tiles), Maloomat pages with every confirmed fact, Madad contacts, both languages, admin (menu, majlis, announcements, pages, offices, facts, Still missing, Lisan review, log).
 2. **Sign-in, schedule, room** - built and live. Tour ID + ITS; schedule from the Karbala Ziyarat Sheet (the same read-only feed zt reads); room, floor and building from NKERP; stay dates; Wi-Fi steps with the zair's own ITS and tour ID, copy buttons and a Wi-Fi QR; the "next up" arch (room on arrival, next ziyarat, departure).
    - `ADMIN_PIN`, `NKERP_LOGIN_ID` and `NKERP_PASSWORD` are set on the Worker. Admin opens on the live site; a verified sign-in there returns the room and Wi-Fi details.
-   - Redesigned as a liquid-glass dashboard (see DECISIONS.md).
+   - Liquid-glass design; since the owner's "nothing hidden" rule, Aaj shows everything in full (see DECISIONS.md and UX-CHANGELOG.md).
 3. **Madad requests** - next. Request forms, My requests with live status, admin inbox, web push to admin, the Change requests tab in the Sheet.
 4. **Izan card scan, feedback, offline polish** - needs the read-only lookup endpoint on Mawaid-Scanner (on a branch; tell the owner before merging).
 
@@ -27,7 +27,7 @@ The brief's own milestone list (section 18) did not arrive, so this order is min
 
 ## Waiting on the owner
 - Sections 10 (rest) to 19 of the brief.
-- Whether rooms should be read from the Krb Accommodation Sheet (owner is checking the Sheet), and how the app may read it.
+- Rooms: the Krb Accomodation Sheet has no ITS column, so it cannot give a person's room (see DECISIONS.md). Owner to decide: stay on NKERP, use the Sheet for single-room tours, or add an ITS column.
 - Answers in `CONTENT-TODO.md`.
 
 ## How to resume

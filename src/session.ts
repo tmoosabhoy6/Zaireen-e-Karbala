@@ -44,16 +44,17 @@ export async function loadMe(): Promise<void> {
   } catch { /* offline */ }
 }
 
+/** Signs in. Returns null on success, else a code the form words in the reader's language. */
 export async function signIn(tour: string, its: string): Promise<string | null> {
   try {
     const res = await fetch("/api/signin", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ tour, its }) });
     const data = await res.json().catch(() => ({}));
-    if (!res.ok) return data.error || "Sign-in did not work. Please try again.";
+    if (!res.ok) return data.code || "other";
     set(data as Me);
     void refresh(); // content for signed-in zaereen (Wi-Fi) arrives now
     return null;
   } catch {
-    return "No connection. Check your internet and try again.";
+    return "offline";
   }
 }
 

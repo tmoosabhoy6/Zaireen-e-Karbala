@@ -1,11 +1,15 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
-import { BedDouble, BookOpen, ChevronLeft, ChevronRight, Clock, Megaphone, MessageCircle, Search, Utensils } from "lucide-react";
-import { karbalaNow, parseClock, parseRange } from "../shared/time";
+import {
+  AlertTriangle, BookOpen, CalendarDays, ChevronDown, ChevronLeft, ChevronRight, Clock, Coffee, Download, History, Hourglass, LifeBuoy,
+  Megaphone, MessageCircle, Moon, RefreshCw, Search, SearchX, Share2, Sparkles, Sun, Sunrise, Utensils, X, Maximize2,
+} from "lucide-react";
+import { addDays, karbalaNow, parseClock, parseRange } from "../shared/time";
 import { PLACES, majlisDefault, type Assembly, type PlaceId } from "../shared/ziyarat";
+import { DrawCheck, Reveal, fmtWait, haptic, toast, useInstall } from "./fx";
 import { tr, tr2, type Key, type Lang } from "./i18n";
 import { back, go } from "./router";
-import { byId, inGroup, loc, type Item, type Payload } from "./store";
-import { Blocks, Fact, Icon, MenuCard, Office, Sheet, T, Tab, fmt, type Ctx } from "./ui";
+import { byId, inGroup, loc, refresh, type Item, type Payload } from "./store";
+import { Blocks, Fact, Icon, Lightbox, MenuCard, Office, Pic, T, Tab, fallbackProps, fmt, type Ctx } from "./ui";
 
 const link = (path: string) => ({ href: path, onClick: (e: React.MouseEvent) => { e.preventDefault(); go(path); } });
 
@@ -60,11 +64,11 @@ export function Arch({ children }: { children: ReactNode }) {
       <svg className="arch-svg" viewBox={`0 0 ${w} ${h}`} width={w} height={h} aria-hidden="true">
         <defs>
           <linearGradient id="arch-grad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#96321f" /><stop offset="0.45" stopColor="#74200f" /><stop offset="1" stopColor="#56130a" /></linearGradient>
-          <radialGradient id="arch-glow" cx="0.5" cy="0" r="0.9"><stop offset="0" stopColor="#ffd9a8" stopOpacity="0.28" /><stop offset="0.6" stopColor="#ffd9a8" stopOpacity="0" /></radialGradient>
+          <radialGradient id="arch-glow" cx="0.5" cy="0" r="0.9"><stop offset="0" stopColor="#ffd9a8" stopOpacity="0.3" /><stop offset="0.6" stopColor="#ffd9a8" stopOpacity="0" /></radialGradient>
           <clipPath id="arch-clip"><path d={outer} /></clipPath>
         </defs>
         <path d={outer} fill="url(#arch-grad)" />
-        <path d={outer} fill="url(#arch-glow)" />
+        <path className="arch-glow" d={outer} fill="url(#arch-glow)" /> {/* [I34] */}
         <g clipPath="url(#arch-clip)"><rect className="arch-shine" x={-w * 0.5} y={-h * 0.2} width={w * 0.45} height={h * 1.4} /></g>
         <path className="arch-line" d={inner} />
         <path className="arch-beam" d={inner} pathLength={100} />
@@ -80,16 +84,14 @@ export const longDate = (iso: string) => {
   const d = new Date(`${iso}T00:00:00Z`);
   return `${WEEKDAYS_EN[d.getUTCDay()]}, ${d.getUTCDate()} ${MONTHS_EN[d.getUTCMonth()]}`;
 };
-const stamp = (iso: string) => {
-  const k = karbalaNow(new Date(iso));
-  return `${longDate(k.date)}, ${fmt(k.minutes)}`;
-};
 
 // ---------------------------------------------------------------------------
-// The day: namaz, Faiz Mawaid and tonight's majlis in the order the day runs
+// Today: namaz, Faiz Mawaid and tonight's majlis in the order the day runs. [F1]
 // ---------------------------------------------------------------------------
 
-interface Row { key: string; at: number | null; end?: number; label: string; value: string; fallback: boolean; extra?: ReactNode; strong?: boolean }
+interface Row { key: string; at: number | null; end?: number; label: string; value: string; fallback: boolean; icon: typeof Sun; majlis?: boolean }
+
+const ROW_ICON: Record<string, typeof Sun> = { "fact.namaz.fajr": Sunrise, "fact.namaz.zohr": Sun, "fact.namaz.maghrib": Moon, "fact.mawaid.nashta": Coffee };
 
 function dayRows(ctx: Ctx): Row[] {
   const { lang, payload } = ctx;
@@ -98,211 +100,196 @@ function dayRows(ctx: Ctx): Row[] {
     const en = f.t.value ?? "";
     const range = parseRange(en);
     const after = f.data.after ? Number(String(f.data.after).slice(0, 2)) * 60 + Number(String(f.data.after).slice(3, 5)) : null;
-    rows.push({ key: f.id, at: range ? range[0] : parseClock(en) ?? after, end: range?.[1], label: loc(f, "label", lang), value: loc(f, "value", lang), fallback: lang === "lud" && !f.l?.label });
+    rows.push({
+      key: f.id, at: range ? range[0] : parseClock(en) ?? after, end: range?.[1], label: loc(f, "label", lang), value: loc(f, "value", lang),
+      fallback: lang === "lud" && !f.l?.label, icon: ROW_ICON[f.id] ?? (f.grp === "mawaid" ? Utensils : Sun), // [I3]
+    });
   }
+  // [F44] Tonight's majlis appears once, as a row of the day (it used to be repeated in a second block).
   if (payload.majlis) {
     const d = majlisDefault(payload.majlis.date);
     const venue = (lang === "lud" && payload.majlis.venue_lud) || payload.majlis.venue_en || placeName(payload, d.place, lang).name;
     const time = (lang === "lud" && payload.majlis.time_lud) || payload.majlis.time_en || assemblyTime(payload, d, lang);
-    rows.push({ key: "majlis", at: parseClock(payload.majlis.time_en || d.time || "") ?? 19 * 60 + 30, label: tr(lang, "majlisTonight"), value: `${time}\n${venue}`, fallback: false, strong: true });
+    rows.push({ key: "majlis", at: parseClock(payload.majlis.time_en || d.time || "") ?? 19 * 60 + 30, label: tr(lang, "majlisTonight"), value: `${time}\n${venue}`, fallback: false, icon: BookOpen, majlis: true });
   }
   return rows.sort((a, b) => (a.at ?? 9999) - (b.at ?? 9999));
 }
 
-function pick(rows: Row[], minutes: number) {
+function Today({ ctx }: { ctx: Ctx }) {
+  const { lang, payload, minutes } = ctx;
+  const rows = dayRows(ctx);
   const current = rows.find((r) => r.at !== null && r.end !== undefined && minutes >= r.at && minutes < r.end) ?? null;
   const upcoming = rows.filter((r) => r.at !== null && r.at > minutes);
-  // After the last event of the day, tomorrow's first one is next.
-  const next = upcoming[0] ?? rows.find((r) => r.at !== null) ?? null;
-  return { current, next: current ? upcoming[0] ?? null : next, then: current ? null : upcoming[1] ?? null };
-}
-
-function DayLine({ ctx }: { ctx: Ctx }) {
-  const { lang, minutes } = ctx;
-  const rows = dayRows(ctx);
-  const { current, next } = pick(rows, minutes);
+  const next = upcoming[0] ?? null;
+  const done = rows.filter((r) => r.at !== null && (r.end ?? r.at) <= minutes).length;
   return (
-    <ol className="dayline">
-      {rows.map((r) => {
-        const state = r === current ? "now" : r === next && r.at !== null && r.at > minutes ? "next" : r.at !== null && (r.end ?? r.at) <= minutes ? "past" : "";
-        return (
-          <li key={r.key} className={state}>
-            <span className="dayline-mark" aria-hidden="true" />
-            <div className="dayline-main" {...(r.fallback ? { dir: "ltr", "data-fallback": "" } : {})}>
-              <span className="dayline-label">{r.strong ? <strong>{r.label}</strong> : r.label}{state === "now" && <span className="pill open">{tr(lang, "now")}</span>}{state === "next" && <span className="pill next">{tr(lang, "next")}</span>}</span>
-              <span className="dayline-value pre">{r.value}</span>
-            </div>
-          </li>
-        );
-      })}
-    </ol>
+    <section className="block today">
+      <h2 className="card-title"><Clock size={20} aria-hidden="true" />{tr(lang, "todayTimes")}</h2>
+      <p className="date-line" dir="ltr"><CalendarDays size={16} aria-hidden="true" />{longDate(payload.today)}{payload.menu?.hijri ? ` / ${payload.menu.hijri}` : ""}</p> {/* [I11] */}
+      {/* [I1] The line fills with colour as the day goes on. */}
+      <ol className="dayline" style={{ ["--fill" as string]: `${Math.round(((done + (current ? 0.5 : 0)) / Math.max(1, rows.length)) * 100)}%` }}>
+        {rows.map((r, i) => {
+          const state = r === current ? "now" : r === next ? "next" : r.at !== null && (r.end ?? r.at) <= minutes ? "past" : "";
+          const RowIcon = r.icon;
+          return (
+            <li key={r.key} className={`${state}${r.majlis ? " majlis" : ""}`} style={{ ["--i" as string]: i }}> {/* [I9] [I4] [I12] */}
+              <span className="dayline-mark" aria-hidden="true">{state === "past" && <DrawCheck size={11} />}</span> {/* [I8] [I2] */}
+              <span className="dayline-ic" aria-hidden="true"><RowIcon size={19} /></span>
+              <div className="dayline-main" {...fallbackProps(r.fallback)}>
+                <span className="dayline-label">{r.label}
+                  {state === "now" && <span className="pill open"><i className="live" aria-hidden="true" />{tr(lang, "now")}</span>}
+                  {state === "next" && <span className="pill next">{tr(lang, "next")}</span>}
+                </span>
+                <span className="dayline-value pre">{r.value}</span> {/* [I10] */}
+                {state === "now" && r.end !== undefined && r.at !== null && (
+                  <span className="dayline-live">
+                    <span className="bar" aria-hidden="true"><i style={{ ["--p" as string]: `${Math.round(((minutes - r.at) / (r.end - r.at)) * 100)}%` }} /></span> {/* [I5] */}
+                    <bdi className="count" dir="ltr"><Hourglass size={14} aria-hidden="true" />{fmtWait(r.end - minutes)}</bdi> {/* [I6] */}
+                  </span>
+                )}
+                {state === "next" && r.at !== null && <bdi className="count" dir="ltr"><Clock size={14} aria-hidden="true" />{fmtWait(r.at - minutes)}</bdi>} {/* [I7] */}
+                {r.majlis && payload.majlis?.booklet && <a className="btn-quiet" href={`/api/file/${payload.majlis.booklet}`} target="_blank" rel="noopener"><BookOpen size={18} aria-hidden="true" /><span>{tr(lang, "booklet")}</span></a>}
+              </div>
+            </li>
+          );
+        })}
+      </ol>
+    </section>
   );
 }
 
-function NowTile({ ctx }: { ctx: Ctx }) {
-  const { lang, payload, minutes } = ctx;
-  const [open, setOpen] = useState(false);
-  const { current, next, then } = pick(dayRows(ctx), minutes);
-  const main = current ?? next;
-  const after = current ? next : then;
-  const worded = !!main && !/\d/.test(main.value);
-  // Time until the next event; tomorrow's first event counts across midnight.
-  const wait = !current && main && main.at !== null ? (main.at > minutes ? main.at - minutes : main.at + 1440 - minutes) : null;
-  const waitText = wait === null ? "" : wait >= 60 ? `${Math.floor(wait / 60)}h ${wait % 60}m` : `${wait}m`;
+export function Community({ ctx }: { ctx: Ctx }) {
+  const f = byId(ctx.payload, "fact.community.url");
+  if (!f || !f.data.v) return null;
   return (
-    <>
-      <button type="button" className="tile pane" onClick={() => setOpen(true)}>
-        <span className="tile-label">{current ? <i className="live" aria-hidden="true" /> : <Clock size={16} aria-hidden="true" />}{tr(lang, current ? "now" : "next")}{waitText && <bdi className="count" dir="ltr">{waitText}</bdi>}</span>
-        {main ? (
-          <span {...(main.fallback ? { dir: "ltr", "data-fallback": "" } : {})} style={{ display: "grid", gap: 2 }}>
-            <span className="tile-title">{main.label}</span>
-            <span className={`tile-big${worded ? " worded" : ""}`}>{main.value.split("\n")[0]}</span>
-          </span>
-        ) : <span className="tile-sub">{tr(lang, "soon")}</span>}
-        {current && current.end !== undefined && current.at !== null && <span className="bar" aria-hidden="true"><i style={{ ["--p" as string]: `${Math.round(((minutes - current.at) / (current.end - current.at)) * 100)}%` }} /></span>}
-        {after && <span className="tile-sub one-line" {...(after.fallback ? { dir: "ltr", "data-fallback": "" } : {})}>{tr2(lang, "then")}: {after.label}</span>}
-      </button>
-      {open && (
-        <Sheet title={tr2(lang, "allDay")} onClose={() => setOpen(false)} lang={lang}>
-          <p className="date-line" dir="ltr">{longDate(payload.today)}{payload.menu?.hijri ? ` / ${payload.menu.hijri}` : ""}</p>
-          <DayLine ctx={ctx} />
-        </Sheet>
-      )}
-    </>
+    <a className="btn-whatsapp" href={f.data.v} target="_blank" rel="noopener noreferrer">
+      <MessageCircle size={22} aria-hidden="true" /><span>{tr(ctx.lang, "joinCommunity")}</span> {/* [I131] */}
+    </a>
   );
 }
 
-function MenuTile({ ctx }: { ctx: Ctx }) {
-  const { lang, payload, minutes } = ctx;
-  const [open, setOpen] = useState(false);
-  const [meal, setMeal] = useState<"lunch" | "dinner">(minutes < 15 * 60 ? "lunch" : "dinner");
-  const menu = payload.menu;
-  const items = menu?.[meal] ?? [];
-  const label = (m: "lunch" | "dinner") => tr(lang, m);
-  return (
-    <>
-      <div className="tile pane wide" style={{ minHeight: 0 }}>
-        <div className="tile-head">
-          <span className="tile-label"><Utensils size={16} aria-hidden="true" />{tr(lang, "menuToday")}</span>
-          <div className="seg" style={{ ["--i" as string]: meal === "lunch" ? 0 : 1 }}>
-            {(["lunch", "dinner"] as const).map((m) => <button key={m} type="button" aria-pressed={meal === m} onClick={() => setMeal(m)}>{label(m)}</button>)}
-          </div>
-        </div>
-        <button type="button" onClick={() => setOpen(true)} style={{ display: "grid", gap: 2, marginTop: 4 }}>
-          {items.length ? (
-            <ul className="menu-lines" dir="ltr">
-              {items.slice(0, 2).map((x, i) => <li key={i}>{x}{i === 1 && items.length > 2 && <span className="tile-sub"> +{items.length - 2} {tr2(lang, "moreItems")}</span>}</li>)}
-            </ul>
-          ) : <span className="tile-sub">{tr(lang, "menuNone")}</span>}
-        </button>
-      </div>
-      {open && <Sheet title={tr(lang, "menuToday")} onClose={() => setOpen(false)} lang={lang}><MenuCard ctx={ctx} /></Sheet>}
-    </>
-  );
-}
+// ---- Announcements, in full, newest first. [F4] ----
 
-function MajlisTile({ ctx }: { ctx: Ctx }) {
+const SEEN_KEY = "zk.seen";
+const readSeen = (): string[] => { try { return JSON.parse(localStorage.getItem(SEEN_KEY) || "[]"); } catch { return []; } };
+/** [I24] True when there is an announcement this phone has not shown yet. */
+export const hasUnread = (payload: Payload | null) => !!payload?.announcements.length && !readSeen().includes(payload.announcements[0].id);
+
+function News({ ctx }: { ctx: Ctx }) {
   const { lang, payload } = ctx;
-  const m = payload.majlis;
-  if (!m) return null;
-  const d = majlisDefault(m.date);
-  const venue = (lang === "lud" && m.venue_lud) || m.venue_en || placeName(payload, d.place, lang).name;
-  const time = (lang === "lud" && m.time_lud) || m.time_en || assemblyTime(payload, d, lang);
+  const news = payload.announcements;
+  const [seen] = useState(readSeen);
+  const [older, setOlder] = useState(false);
+  const [zoom, setZoom] = useState<string | null>(null);
+  useEffect(() => {
+    // Once they have been on screen for a moment, they are no longer new.
+    const t = setTimeout(() => { try { localStorage.setItem(SEEN_KEY, JSON.stringify(news.map((a) => a.id).slice(0, 60))); } catch { /* fine */ } }, 2500);
+    return () => clearTimeout(t);
+  }, [news.map((a) => a.id).join()]);
+  const dayLabel = (iso: string) => {
+    const k = karbalaNow(new Date(iso));
+    const day = k.date === payload.today ? tr2(lang, "today") : k.date === addDays(payload.today, -1) ? tr2(lang, "yesterday") : longDate(k.date); // [I28]
+    return `${day}, ${fmt(k.minutes)}`;
+  };
+  const item = (a: (typeof news)[number], first: boolean) => (
+    <li key={a.id} className={first ? "first" : ""}> {/* [I25] */}
+      <time>{dayLabel(a.at)}{!seen.includes(a.id) && <span className="pill new">{tr2(lang, "isNew")}</span>}</time> {/* [I23] */}
+      <p className="pre" {...fallbackProps(lang === "lud" && !a.lud)}>{(lang === "lud" && a.lud) || a.en}</p>
+      {a.media && (
+        <button type="button" className="news-pic" onClick={() => setZoom(`/api/file/${a.media}`)}> {/* [I27] */}
+          <Pic src={`/api/file/${a.media}`} alt="" /><span><Maximize2 size={17} aria-hidden="true" />{tr2(lang, "fullScreen")}</span>
+        </button>
+      )}
+    </li>
+  );
   return (
-    <div className="tile pane wide t-majlis">
-      <span style={{ display: "grid", gap: 1 }}>
-        <span className="tile-label"><BookOpen size={16} aria-hidden="true" />{tr(lang, "majlisTonight")}</span>
-        <span className="tile-title">{time}</span>
-        <span className="tile-sub">{venue}</span>
-      </span>
-      {m.booklet && <a className="btn-quiet" href={`/api/file/${m.booklet}`} target="_blank" rel="noopener"><BookOpen size={18} aria-hidden="true" /><span>{tr(lang, "booklet")}</span></a>}
+    <Reveal as="section" className="block">
+      <h2 className="card-title"><Megaphone size={20} aria-hidden="true" />{tr(lang, "announcements")}</h2>
+      <Community ctx={ctx} />
+      {news.length === 0 ? <div className="empty"><Megaphone size={26} aria-hidden="true" /><p>{tr(lang, "noAnnouncements")}</p></div> : (
+        <>
+          <ul className="news">{news.slice(0, 3).map((a, i) => item(a, i === 0))}</ul>
+          {news.length > 3 && (
+            <>
+              {older && <ul className="news older">{news.slice(3).map((a) => item(a, false))}</ul>}
+              {/* [I26] Older ones open in place with a labelled button. */}
+              <button type="button" className="btn-quiet more" aria-expanded={older} onClick={() => { haptic(); setOlder(!older); }}>
+                {tr2(lang, older ? "hideOlder" : "showOlder")}{!older && ` (${news.length - 3})`}<ChevronDown size={18} aria-hidden="true" />
+              </button>
+            </>
+          )}
+        </>
+      )}
+      {zoom && <Lightbox src={zoom} alt="" onClose={() => setZoom(null)} lang={lang} />}
+    </Reveal>
+  );
+}
+
+/** [I44] When the page was last updated, with a labelled Refresh button. [F41] */
+function Updated({ lang, at, loading }: { lang: Lang; at: number | null; loading: boolean }) {
+  const k = at ? karbalaNow(new Date(at)) : null;
+  return (
+    <p className="updated">
+      <span>{k ? <>{tr2(lang, "updated")} <bdi dir="ltr">{fmt(k.minutes)}</bdi></> : ""}</span>
+      <button type="button" className="btn-quiet" onClick={() => { haptic(); void refresh(); }}><RefreshCw size={17} className={loading ? "spin" : ""} aria-hidden="true" />{/* [I135] */}{tr2(lang, "refresh")}</button>
+    </p>
+  );
+}
+
+/** [I46] Offers to put the app on the home screen, where the phone allows it. */
+function Install({ lang }: { lang: Lang }) {
+  const install = useInstall();
+  const [hidden, setHidden] = useState(() => { try { return !!localStorage.getItem("zk.install.no"); } catch { return false; } });
+  if (!install || hidden) return null;
+  return (
+    <div className="block install"> {/* [I137] */}
+      <Download size={24} aria-hidden="true" />
+      <p>{tr2(lang, "install")}</p>
+      <button type="button" className="btn-main slim" onClick={() => void install()}>{tr2(lang, "installDo")}</button>
+      <button type="button" className="btn-quiet" onClick={() => { setHidden(true); try { localStorage.setItem("zk.install.no", "1"); } catch { /* fine */ } }}>{tr2(lang, "installNo")}</button>
     </div>
   );
 }
 
-export function Community({ ctx, tile }: { ctx: Ctx; tile?: boolean }) {
-  const f = byId(ctx.payload, "fact.community.url");
-  if (!f || !f.data.v) return null;
-  if (tile) {
-    return (
-      <a className="tile pane t-wa" href={f.data.v} target="_blank" rel="noopener noreferrer">
-        <span className="tile-label"><MessageCircle size={16} aria-hidden="true" />WhatsApp</span>
-        <span className="tile-title">{tr(ctx.lang, "joinCommunity")}</span>
-      </a>
-    );
-  }
-  return (
-    <a className="btn-whatsapp wide" href={f.data.v} target="_blank" rel="noopener noreferrer">
-      <MessageCircle size={22} aria-hidden="true" /><span>{tr(ctx.lang, "joinCommunity")}</span>
-    </a>
-  );
-}
-
-function NewsTile({ ctx }: { ctx: Ctx }) {
-  const { lang, payload } = ctx;
-  const [open, setOpen] = useState(false);
-  const news = payload.announcements;
-  const text = (a: (typeof news)[number]) => (lang === "lud" && a.lud) || a.en;
-  const fb = (a: (typeof news)[number]) => (lang === "lud" && !a.lud ? { dir: "ltr" as const, lang: "en", "data-fallback": "" } : {});
-  return (
-    <>
-      <button type="button" className="tile pane" onClick={() => news.length && setOpen(true)}>
-        <span className="tile-label"><Megaphone size={16} aria-hidden="true" />{tr(lang, "announcements")}{news.length > 1 && <span className="pill shut">{news.length}</span>}</span>
-        {news.length ? <span className="clamp3" {...fb(news[0])}>{text(news[0])}</span> : <span className="tile-sub">{tr(lang, "noAnnouncements")}</span>}
-      </button>
-      {open && (
-        <Sheet title={tr(lang, "announcements")} onClose={() => setOpen(false)} lang={lang}>
-          <ul className="news">
-            {news.map((a) => (
-              <li key={a.id}>
-                <time dir="ltr">{stamp(a.at)}</time>
-                <p className="pre" {...fb(a)}>{text(a)}</p>
-                {a.media && <img src={`/api/file/${a.media}`} alt="" loading="lazy" />}
-              </li>
-            ))}
-          </ul>
-        </Sheet>
-      )}
-    </>
-  );
-}
-
-/** Aaj: one screen. The arch, then tiles for now, the room, the menu, the majlis, what people ask most, and news. */
-export function Aaj({ ctx, arch, roomTile }: { ctx: Ctx; arch: ReactNode; roomTile: ReactNode }) {
+/** Aaj: everything in plain view, top to bottom. Nothing is behind an unmarked tap or a drag-only sheet. [F6] [F10] */
+export function Aaj({ ctx, arch, room, at, loading }: { ctx: Ctx; arch: ReactNode; room: ReactNode; at: number | null; loading: boolean }) {
   const { lang, payload } = ctx;
   const tiles = payload.items.filter((i) => i.kind === "page" && i.data.tile).sort((a, b) => Number(a.data.tile) - Number(b.data.tile));
+  const Chevron = lang === "lud" ? ChevronLeft : ChevronRight;
   return (
-    <>
+    <div className="aaj">
       <Arch>{arch}</Arch>
-      <div className="grid">
-        <NowTile ctx={ctx} />
-        {roomTile}
-        <MajlisTile ctx={ctx} />
-        <MenuTile ctx={ctx} />
-        {tiles.length > 0 && (
-          <div className="quick wide" aria-label={tr(lang, "quick")}>
-            {tiles.slice(0, 4).map((p) => (
-              <a key={p.id} {...link(`/p/${p.id.slice(5)}`)}>
-                <span className="quick-ic pane"><Icon name={p.icon} size={24} /></span>
-                <T item={p} field="title" lang={lang} />
-              </a>
-            ))}
-          </div>
-        )}
-        <NewsTile ctx={ctx} />
-        <Community ctx={ctx} tile />
+      <div className="cols">
+        <div className="col">
+          {room}
+          <Today ctx={ctx} />
+        </div>
+        <div className="col">
+          <Reveal as="section" className="block">
+            <h2 className="card-title"><Utensils size={20} aria-hidden="true" />{tr(lang, "menuToday")}</h2>
+            <MenuCard ctx={ctx} />
+          </Reveal>
+          {tiles.length > 0 && (
+            <Reveal as="section" className="quick-wrap">
+              <Tab icon={<Sparkles size={18} aria-hidden="true" />}>{tr(lang, "quick")}</Tab> {/* [F46] */}
+              <div className="quick">
+                {tiles.slice(0, 4).map((p, i) => (
+                  // [I36] Each tile carries a chevron, so it reads as something to tap.
+                  <a key={p.id} className="qtile pane" style={{ ["--i" as string]: i }} {...link(`/p/${p.id.slice(5)}`)}>
+                    <span className="qtile-ic"><Icon name={p.icon} size={24} /></span> {/* [I35] */}
+                    <T item={p} field="title" lang={lang} />
+                    <Chevron size={18} aria-hidden="true" className="qtile-go" />
+                  </a>
+                ))}
+              </div>
+            </Reveal>
+          )}
+          <News ctx={ctx} />
+          <Install lang={lang} />
+          <Updated lang={lang} at={at} loading={loading} />
+        </div>
       </div>
-    </>
-  );
-}
-
-export function SignInTile({ lang }: { lang: Lang }) {
-  return (
-    <a className="tile pane t-signin" {...link("/signin")}>
-      <span className="tile-label"><BedDouble size={16} aria-hidden="true" />{tr2(lang, "signInTile")}</span>
-      <span className="tile-title">{tr(lang, "signIn")}</span>
-      <span className="tile-sub">{tr(lang, "tourId")} + {tr(lang, "its")}</span>
-    </a>
+    </div>
   );
 }
 
@@ -311,20 +298,24 @@ export function SignInTile({ lang }: { lang: Lang }) {
 // ---------------------------------------------------------------------------
 
 export function LostPerson({ lang }: { lang: Lang }) {
+  const Chevron = lang === "lud" ? ChevronLeft : ChevronRight;
   return (
+    // [F49] It reads as a button: an alert mark, a chevron, and a press state.
     <a className="lost" {...link("/p/lost")}>
-      <strong>{tr(lang, "lostPerson")}</strong>
-      <span>{tr(lang, "lostPersonDo")}</span>
+      <span className="lost-ic"><AlertTriangle size={26} aria-hidden="true" /></span> {/* [I83] */}
+      <span><strong>{tr(lang, "lostPerson")}</strong><span>{tr(lang, "lostPersonDo")}</span></span>
+      <Chevron size={22} aria-hidden="true" />
     </a>
   );
 }
 
 export function MadadContacts({ ctx }: { ctx: Ctx }) {
-  const { payload } = ctx;
+  const { payload, lang } = ctx;
   return (
     <div className="stack">
+      <Tab icon={<LifeBuoy size={18} aria-hidden="true" />}>{loc(byId(payload, "page.contacts"), "title", lang)}</Tab> {/* [I88] */}
       <div className="block facts">{inGroup(payload, "fact", "contact").map((f) => <Fact key={f.id} item={f} ctx={ctx} />)}</div>
-      <div className="block"><Office item={byId(payload, "office.reception")} ctx={ctx} /></div>
+      <div className="block"><Office item={byId(payload, "office.reception")} ctx={ctx} /></div> {/* [I87] */}
     </div>
   );
 }
@@ -334,46 +325,79 @@ export function MadadContacts({ ctx }: { ctx: Ctx }) {
 // ---------------------------------------------------------------------------
 
 const SECTIONS: [string, Key][] = [["stay", "secStay"], ["ziyarat", "secZiyarat"], ["places", "secPlaces"], ["travel", "secTravel"], ["more", "secMore"]];
+const RECENT_KEY = "zk.recent";
+const readRecent = (): string[] => { try { return JSON.parse(localStorage.getItem(RECENT_KEY) || "[]"); } catch { return []; } };
 
-function PageTile({ item, lang, i }: { item: Item; lang: Lang; i: number }) {
+/** [I91] The letters that matched the search are marked. */
+function Marked({ text, needle }: { text: string; needle: string }) {
+  const at = needle ? text.toLowerCase().indexOf(needle) : -1;
+  if (at < 0) return <>{text}</>;
+  return <>{text.slice(0, at)}<mark>{text.slice(at, at + needle.length)}</mark>{text.slice(at + needle.length)}</>;
+}
+
+function PageTile({ item, lang, i, needle = "" }: { item: Item; lang: Lang; i: number; needle?: string }) {
+  const path = `/p/${item.id.replace(/^page\./, "")}`;
+  const Chevron = lang === "lud" ? ChevronLeft : ChevronRight;
+  const title = loc(item, "title", lang);
   return (
-    <a className="ptile pane" style={{ ["--i" as string]: i }} href={`/p/${item.id.replace(/^page\./, "")}`}
+    <a className="ptile pane" data-sec={item.grp} style={{ ["--i" as string]: i }} href={path}
       onClick={(e) => {
         e.preventDefault();
         const ic = e.currentTarget.querySelector<HTMLElement>(".ptile-ic");
         if (ic) ic.style.viewTransitionName = "page-ic";
-        go(`/p/${item.id.replace(/^page\./, "")}`);
+        go(path);
       }}>
-      <span className="ptile-ic"><Icon name={item.icon} /></span>
-      <T item={item} field="title" lang={lang} />
+      <span className="ptile-ic"><Icon name={item.icon} /></span> {/* [I94] */}
+      <span {...fallbackProps(lang === "lud" && !item.l?.title)}><Marked text={title} needle={needle} /></span>
+      <Chevron size={18} aria-hidden="true" className="ptile-go" /> {/* [F50] */}
     </a>
   );
 }
 
 export function Maloomat({ ctx }: { ctx: Ctx }) {
   const { lang, payload } = ctx;
-  const [q, setQ] = useState("");
+  // [F14] The search text survives a visit to a page and back.
+  const [q, setQ] = useState(() => { try { return sessionStorage.getItem("zk.q") || ""; } catch { return ""; } });
+  useEffect(() => { try { sessionStorage.setItem("zk.q", q); } catch { /* fine */ } }, [q]);
+  const input = useRef<HTMLInputElement>(null);
   const needle = q.trim().toLowerCase();
   const all = payload.items.filter((i) => i.kind === "page" && i.grp);
   const hits = needle ? all.filter((p) => `${p.t.title ?? ""} ${p.l?.title ?? ""}`.toLowerCase().includes(needle)) : [];
+  const recent = readRecent().map((id) => all.find((p) => p.id === id)).filter((p): p is Item => !!p).slice(0, 4);
   let n = 0;
   return (
     <>
-      <label className="search pane">
-        <Search size={20} aria-hidden="true" />
-        <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder={tr2(lang, "searchInfo")} aria-label={tr2(lang, "searchInfo")} />
-      </label>
+      <form className="search pane" role="search" onSubmit={(e) => { e.preventDefault(); input.current?.blur(); /* [I97] */ }}>
+        <Search size={20} aria-hidden="true" /> {/* [I96] */}
+        <input ref={input} type="search" enterKeyHint="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder={tr2(lang, "searchInfo")} aria-label={tr2(lang, "searchInfo")} />
+        {q && <button type="button" className="search-x" onClick={() => { setQ(""); input.current?.focus(); }} aria-label={tr2(lang, "clear")}><X size={18} aria-hidden="true" /></button>} {/* [I89] */}
+      </form>
       {needle ? (
-        hits.length ? <div className="ptiles" style={{ marginTop: 14 }}>{hits.map((p, i) => <PageTile key={p.id} item={p} lang={lang} i={i} />)}</div> : <p className="lead">{tr2(lang, "noResults")}</p>
-      ) : SECTIONS.map(([id, key]) => {
-        const pages = inGroup(payload, "page", id);
-        return pages.length ? (
-          <section key={id}>
-            <Tab>{tr(lang, key)}</Tab>
-            <div className="ptiles">{pages.map((p) => <PageTile key={p.id} item={p} lang={lang} i={n++} />)}</div>
-          </section>
-        ) : null;
-      })}
+        <>
+          <p className="note-line" role="status"><bdi dir="ltr">{hits.length}</bdi> {tr2(lang, "results")}</p> {/* [I90] */}
+          {hits.length ? <div className="ptiles">{hits.map((p, i) => <PageTile key={p.id} item={p} lang={lang} i={i} needle={needle} />)}</div>
+            : <div className="block empty"><SearchX size={28} aria-hidden="true" /><p>{tr2(lang, "noResults")}</p></div> /* [I95] */}
+        </>
+      ) : (
+        <>
+          {recent.length > 0 && (
+            // [I92] The pages opened most recently, one tap away.
+            <section>
+              <Tab icon={<History size={18} aria-hidden="true" />}>{tr2(lang, "recent")}</Tab>
+              <div className="chips">{recent.map((p) => <a key={p.id} className="chip" {...link(`/p/${p.id.slice(5)}`)}><Icon name={p.icon} size={17} /><T item={p} field="title" lang={lang} /></a>)}</div>
+            </section>
+          )}
+          {SECTIONS.map(([id, key]) => {
+            const pages = inGroup(payload, "page", id);
+            return pages.length ? (
+              <section key={id}>
+                <Tab>{tr(lang, key)}</Tab> {/* [I93] */}
+                <div className="ptiles">{pages.map((p) => <PageTile key={p.id} item={p} lang={lang} i={n++} />)}</div>
+              </section>
+            ) : null;
+          })}
+        </>
+      )}
     </>
   );
 }
@@ -381,16 +405,46 @@ export function Maloomat({ ctx }: { ctx: Ctx }) {
 export function PageView({ id, ctx, wifi }: { id: string; ctx: Ctx; wifi?: ReactNode }) {
   const { lang, payload } = ctx;
   const page: Item | undefined = byId(payload, `page.${id}`);
-  const Chevron = lang === "lud" ? ChevronRight : ChevronLeft;
+  const Back = lang === "lud" ? ChevronRight : ChevronLeft;
+  const Fwd = lang === "lud" ? ChevronLeft : ChevronRight;
+  useEffect(() => {
+    if (!page) return;
+    try { localStorage.setItem(RECENT_KEY, JSON.stringify([page.id, ...readRecent().filter((x) => x !== page.id)].slice(0, 6))); } catch { /* fine */ }
+  }, [page?.id]);
+  const section = SECTIONS.find(([s]) => s === page?.grp);
+  const siblings = page ? inGroup(payload, "page", page.grp) : [];
+  const at = siblings.findIndex((p) => p.id === page?.id);
+  const prev = at > 0 ? siblings[at - 1] : null, next = at >= 0 && at < siblings.length - 1 ? siblings[at + 1] : null;
+  const share = async () => {
+    const data = { title: page ? loc(page, "title", lang) : "", url: location.href };
+    haptic();
+    try {
+      if (navigator.share) await navigator.share(data);
+      else { await navigator.clipboard.writeText(data.url); toast(tr2(lang, "linkCopied")); }
+    } catch { /* closed without sharing */ }
+  };
   return (
     <article className="page">
-      <button type="button" className="back pane" onClick={() => back("/maloomat")}><Chevron size={20} aria-hidden="true" /><span>{tr(lang, "back")}</span></button>
+      <i className="read-bar" aria-hidden="true" /> {/* [I49] */}
+      <div className="page-top">
+        <button type="button" className="back pane" onClick={() => back("/maloomat")}><Back size={20} aria-hidden="true" /><span>{tr(lang, "back")}</span></button>
+        {page && <button type="button" className="back pane" onClick={share}><Share2 size={18} aria-hidden="true" /><span>{tr2(lang, "share")}</span></button>} {/* [I99] */}
+      </div>
       {page ? (
         <>
+          {section && <p className="crumb">{tr(lang, section[1])}</p>} {/* [I98] */}
           <h1 className="page-title"><span className="page-ic"><Icon name={page.icon} size={26} /></span><T item={page} field="title" lang={lang} /></h1>
           <div className="page-body"><Blocks pageId={page.id} ctx={ctx} wifi={wifi} /></div>
+          {(prev || next) && (
+            // [I100] On to the next page of the same section without going back to the list.
+            <nav className="pager">
+              {prev ? <a className="pane" {...link(`/p/${prev.id.slice(5)}`)}><Back size={18} aria-hidden="true" /><span><small>{tr2(lang, "prevPage")}</small><T item={prev} field="title" lang={lang} /></span></a> : <span />}
+              {next ? <a className="pane end" {...link(`/p/${next.id.slice(5)}`)}><span><small>{tr2(lang, "nextPage")}</small><T item={next} field="title" lang={lang} /></span><Fwd size={18} aria-hidden="true" /></a> : <span />}
+            </nav>
+          )}
+          <a className="help-foot" {...link("/madad")}><LifeBuoy size={19} aria-hidden="true" />{tr2(lang, "needHelp")}<Fwd size={18} aria-hidden="true" /></a> {/* [I119] */}
         </>
-      ) : <p className="soon">{tr(lang, "soon")}</p>}
+      ) : <div className="block empty"><SearchX size={28} aria-hidden="true" /><p>{tr(lang, "soon")}</p></div>}
     </article>
   );
 }

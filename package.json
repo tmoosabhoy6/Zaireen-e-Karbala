@@ -9,7 +9,7 @@
     "build": "vite build",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p worker/tsconfig.json",
     "test": "vitest run",
-    "check": "npm run typecheck && npm test",
+    "check": "npm run typecheck && npm test && node scripts/ux-ledger-check.mjs",
     "deploy": "npm run build && wrangler deploy"
   },
   "dependencies": {
