@@ -1,6 +1,6 @@
 // Keeps the app shell on the phone so pages already opened (Wi-Fi steps above all) work with no connection.
 // Content itself is saved by the app in localStorage; /api/ is never cached here.
-const CACHE = "zk-shell-v1";
+const CACHE = "zk-shell-v2";
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(["/", "/brand/karbala-mualla.svg", "/fonts/Kanz-al-Marjaan-Regular.woff2"])).then(() => self.skipWaiting()));
 });
